@@ -104,7 +104,7 @@ export const BaseLayout = ({ children }: BaseLayoutProps) => {
               <button
                 type="button"
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-zinc-200 hover:bg-zinc-800/50 transition-colors duration-200"
-                onClick={() => handleOptionClick('/')}
+                onClick={() => handleOptionClick('/simulation')}
               >
                 <SmallTrophyIcon />
                 Simulaciones

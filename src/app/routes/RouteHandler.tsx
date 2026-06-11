@@ -1,7 +1,6 @@
 import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom';
 import { BaseLayout } from '../layout';
-import { HomePage } from '../pages';
-import { PredictPage } from '../pages/PredictPage';
+import { HomePage, PredictPage, SimulationPage } from '../pages';
 
 const router = createBrowserRouter([
   {
@@ -19,6 +18,10 @@ const router = createBrowserRouter([
       {
         path: 'predict',
         element: <PredictPage />,
+      },
+      {
+        path: 'simulation',
+        element: <SimulationPage />,
       },
     ],
   },
