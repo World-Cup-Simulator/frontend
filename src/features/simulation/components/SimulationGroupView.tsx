@@ -1,0 +1,184 @@
+import { FlagImage } from '../../../shared/components/FlagImage';
+import type { SimulatedGroup, SimulatedMatch } from '../models';
+
+interface SimulationGroupViewProps {
+  group: { groupCode: string; teams: { code: string; name: string; flagCode: string }[] };
+  simulatedGroup?: SimulatedGroup;
+  resultsMode: 'with-results' | 'no-results';
+}
+
+export const SimulationGroupView = ({ group, simulatedGroup, resultsMode }: SimulationGroupViewProps) => {
+  const getTeamInfo = (code: string) => group.teams.find((t) => t.code === code);
+
+  const getWinner = (match: SimulatedMatch) => {
+    if (match.winner === 'A') return match.teamA;
+    if (match.winner === 'B') return match.teamB;
+    return null;
+  };
+
+  const getRowBg = (position: number) => {
+    if (position === 0) return 'bg-yellow-500/15';
+    if (position === 1) return 'bg-zinc-400/15';
+    if (position === 2) return 'bg-amber-700/20';
+    return '';
+  };
+
+  const tableGridCols = resultsMode === 'with-results'
+    ? 'grid-cols-[28px_1fr_36px_36px_36px_36px]'
+    : 'grid-cols-[28px_1fr_36px]';
+
+  const hasSimulation = !!simulatedGroup;
+
+  return (
+    <div className="flex flex-col bg-zinc-800/50 rounded-2xl border border-zinc-700/50 overflow-hidden">
+      <div className="px-4 py-3 border-b border-zinc-700/50">
+        <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-100">
+          Grupo {group.groupCode}
+        </h3>
+      </div>
+
+      {/* Standings */}
+      <div className="px-4 py-2">
+        {/* Header */}
+        <div className={`grid ${tableGridCols} gap-2 text-[10px] font-medium text-zinc-500 mb-1 px-1`}>
+          <span>Pos</span>
+          <span>Equipo</span>
+          <span className="text-center">Pts</span>
+          {resultsMode === 'with-results' && (
+            <>
+              <span className="text-center">DG</span>
+              <span className="text-center">GF</span>
+              <span className="text-center">GC</span>
+            </>
+          )}
+        </div>
+
+        {hasSimulation ? (
+          simulatedGroup.standings.map((standing, index) => {
+            const team = getTeamInfo(standing.teamCode);
+            return (
+              <div
+                key={standing.teamCode}
+                className={`grid ${tableGridCols} gap-2 items-center py-1.5 px-1 text-left rounded-lg transition-all duration-200
+                  ${getRowBg(index)}
+                `}
+              >
+                <span className="text-xs font-bold text-zinc-400 text-center">{standing.position}º</span>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  {team && <FlagImage code={team.code} alt={team.name} className="h-3.5 w-5 shrink-0" />}
+                  <span className="text-xs font-medium text-zinc-200 truncate">{team?.name || standing.teamCode}</span>
+                </div>
+                <span className="text-xs font-bold text-zinc-100 text-center">{standing.points}</span>
+                {resultsMode === 'with-results' && (
+                  <>
+                    <span className="text-xs text-zinc-300 text-center">{standing.dg}</span>
+                    <span className="text-xs text-zinc-300 text-center">{standing.gf}</span>
+                    <span className="text-xs text-zinc-300 text-center">{standing.gc}</span>
+                  </>
+                )}
+              </div>
+            );
+          })
+        ) : (
+          group.teams.map((team, idx) => (
+            <div key={team.code} className={`grid ${tableGridCols} gap-2 items-center py-1.5 px-1 text-left rounded-lg transition-all duration-200 ${getRowBg(idx)}`}>
+              <span className="text-xs font-bold text-zinc-400 text-center">{idx + 1}º</span>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <FlagImage code={team.code} alt={team.name} className="h-3.5 w-5 shrink-0" />
+                <span className="text-xs font-medium text-zinc-200 truncate">{team.name}</span>
+              </div>
+              <span className="text-xs text-zinc-500 text-center">-</span>
+              {resultsMode === 'with-results' && (
+                <>
+                  <span className="text-xs text-zinc-500 text-center">-</span>
+                  <span className="text-xs text-zinc-500 text-center">-</span>
+                  <span className="text-xs text-zinc-500 text-center">-</span>
+                </>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Matches - Always visible */}
+      <div className="px-4 py-3 border-t border-zinc-700/50">
+        <div className="flex flex-col gap-2">
+          {(hasSimulation ? simulatedGroup.matches : getEmptyMatches(group)).map((match) => {
+            const teamA = getTeamInfo(match.teamA);
+            const teamB = getTeamInfo(match.teamB);
+            const winner = hasSimulation ? getWinner(match) : null;
+
+            return (
+              <div key={match.matchId} className="bg-zinc-800 rounded-lg border border-zinc-700/50 overflow-hidden">
+                {/* Main row: [Flag Name Score Name Flag] */}
+                <div className="flex items-center justify-between px-3 py-2">
+                  {/* Team A side */}
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    {teamA && <FlagImage code={teamA.code} alt={teamA.name} className="h-3.5 w-5 shrink-0" />}
+                    <span className={`text-xs font-medium truncate ${hasSimulation && winner === match.teamA ? 'text-emerald-300' : 'text-zinc-300'}`}>
+                      {teamA?.name || match.teamA}
+                    </span>
+                  </div>
+
+                  {/* Center: Score or VS */}
+                  <div className="flex items-center gap-2 px-2 shrink-0">
+                    {hasSimulation && resultsMode === 'with-results' ? (
+                      <span className="text-sm font-bold text-zinc-100">
+                        {match.goalsA} - {match.goalsB}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-zinc-500 font-medium">vs</span>
+                    )}
+                  </div>
+
+                  {/* Team B side */}
+                  <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+                    <span className={`text-xs font-medium truncate text-right ${hasSimulation && winner === match.teamB ? 'text-emerald-300' : 'text-zinc-300'}`}>
+                      {teamB?.name || match.teamB}
+                    </span>
+                    {teamB && <FlagImage code={teamB.code} alt={teamB.name} className="h-3.5 w-5 shrink-0" />}
+                  </div>
+                </div>
+
+                {/* Sub-row: probabilities (only when simulated) */}
+                {hasSimulation && (
+                  <div className="px-3 py-1.5 bg-zinc-900/50 border-t border-zinc-700/50 flex items-center justify-between">
+                    <span className="text-[10px] text-zinc-400">
+                      Resultado: {match.outcomeProbability}%
+                    </span>
+                    {resultsMode === 'with-results' && (
+                      <span className="text-[10px] text-zinc-400">
+                        Marcador: {match.scoreProbability}%
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+function getEmptyMatches(group: { groupCode: string; teams: { code: string; name: string; flagCode: string }[] }) {
+  const matchups = [
+    [0, 1], [2, 3], [0, 2], [1, 3], [0, 3], [1, 2],
+  ];
+  return matchups.map((matchup, index) => ({
+    matchId: `match-${group.groupCode}-${index}`,
+    groupCode: group.groupCode,
+    teamA: group.teams[matchup[0]].code,
+    teamB: group.teams[matchup[1]].code,
+    goalsA: 0,
+    goalsB: 0,
+    winner: 'draw' as const,
+    date: '',
+    outcomeProbability: 0,
+    scoreProbability: 0,
+    decidedByPenalties: false,
+    teamAWinProbability: 0,
+    teamBWinProbability: 0,
+  }));
+}
