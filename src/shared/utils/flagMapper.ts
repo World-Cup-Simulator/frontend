@@ -1,0 +1,58 @@
+const fifaToIsoMap: Record<string, string> = {
+  ARG: 'ar',
+  BRA: 'br',
+  GER: 'de',
+  FRA: 'fr',
+  ESP: 'es',
+  ENG: 'gb-eng',
+  POR: 'pt',
+  NED: 'nl',
+  BEL: 'be',
+  ITA: 'it',
+  URU: 'uy',
+  CRO: 'hr',
+  MAR: 'ma',
+  JPN: 'jp',
+  USA: 'us',
+  MEX: 'mx',
+  SEN: 'sn',
+  POL: 'pl',
+  SUI: 'ch',
+  GHA: 'gh',
+  CMR: 'cm',
+  ECU: 'ec',
+  AUS: 'au',
+  CAN: 'ca',
+  CRC: 'cr',
+  TUN: 'tn',
+  QAT: 'qa',
+  IRN: 'ir',
+  KOR: 'kr',
+  SRB: 'rs',
+  NGA: 'ng',
+  DEN: 'dk',
+  KSA: 'sa',
+  WAL: 'gb-wls',
+  UKR: 'ua',
+  SCO: 'gb-sct',
+  HUN: 'hu',
+  ALG: 'dz',
+  EGY: 'eg',
+  COL: 'co',
+  CHI: 'cl',
+  PAR: 'py',
+  PER: 'pe',
+  PAN: 'pa',
+  JAM: 'jm',
+  NZL: 'nz',
+  VEN: 've',
+  IRQ: 'iq',
+};
+
+export const getFlagUrl = (fifaCode: string): string => {
+  const isoCode = fifaToIsoMap[fifaCode.toUpperCase()];
+  if (!isoCode) {
+    return '';
+  }
+  return `https://flagcdn.com/w40/${isoCode}.png`;
+};
