@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface BaseLayoutProps {
   children: React.ReactNode;
@@ -39,13 +40,14 @@ const SmallTrophyIcon = () => (
 export const BaseLayout = ({ children }: BaseLayoutProps) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   const handleToggleDropdown = () => {
     setIsDropdownOpen((prev) => !prev);
   };
 
-  const handleOptionClick = (option: string) => {
-    console.log(`Navigating to: ${option}`);
+  const handleOptionClick = (path: string) => {
+    navigate(path);
     setIsDropdownOpen(false);
   };
 
@@ -94,7 +96,7 @@ export const BaseLayout = ({ children }: BaseLayoutProps) => {
               <button
                 type="button"
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-zinc-200 hover:bg-zinc-800/50 transition-colors duration-200"
-                onClick={() => handleOptionClick('Predicciones')}
+                onClick={() => handleOptionClick('/predict')}
               >
                 <SmallTrophyIcon />
                 Predicciones
@@ -102,7 +104,7 @@ export const BaseLayout = ({ children }: BaseLayoutProps) => {
               <button
                 type="button"
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-zinc-200 hover:bg-zinc-800/50 transition-colors duration-200"
-                onClick={() => handleOptionClick('Simulaciones')}
+                onClick={() => handleOptionClick('/')}
               >
                 <SmallTrophyIcon />
                 Simulaciones

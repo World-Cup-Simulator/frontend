@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { TickerTape } from '../../shared/components/TickerTape';
 import type { MatchTick } from '../../shared/models';
 import { GroupCarousel } from '../../features/tournament/components/GroupCarousel';
@@ -152,6 +153,7 @@ const generateMockMatchSummaries = (teamList: TeamSeed[]): MatchSummary[] => {
 };
 
 export const HomePage = () => {
+  const navigate = useNavigate();
   const [view, setView] = useState<'carousel' | 'expanded'>('carousel');
   const mockMatches = generateMockMatches(teams);
   const mockGroups = generateMockGroups(teams);
@@ -184,7 +186,7 @@ export const HomePage = () => {
           <button
             type="button"
             className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl transition-all duration-200 ease-out"
-            onClick={() => console.log('Predecir clicked')}
+            onClick={() => navigate('/predict')}
           >
             Predecir
           </button>

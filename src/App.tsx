@@ -1,12 +1,7 @@
-import { BaseLayout } from './app/layout';
-import { HomePage } from './app/pages';
+import { RouteHandler } from './app/routes';
 
 function App() {
-  return (
-    <BaseLayout>
-      <HomePage />
-    </BaseLayout>
-  );
+  return <RouteHandler />;
 }
 
 export default App;
