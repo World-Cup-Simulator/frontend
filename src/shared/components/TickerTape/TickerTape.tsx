@@ -1,14 +1,15 @@
 import './TickerTape.css';
 import type { MatchTick, TickerTapeProps } from '../../models';
+import { FlagImage } from '../FlagImage';
 
 const TickerItem = ({ match }: { match: MatchTick }) => {
   return (
     <div className="flex flex-col items-center justify-center shrink-0 px-4 py-1 h-full border-r border-zinc-800/50">
       <div className="flex items-center gap-2">
-        <img
-          src={`https://flagcdn.com/w40/${match.homeTeam.flagCode}.png`}
+        <FlagImage
+          code={match.homeTeam.code}
           alt={match.homeTeam.name}
-          className="h-4 w-6 object-cover rounded-sm"
+          className="h-4 w-6"
         />
         <span className="text-sm font-medium uppercase whitespace-nowrap text-zinc-200">
           {match.homeTeam.code}
@@ -23,10 +24,10 @@ const TickerItem = ({ match }: { match: MatchTick }) => {
         <span className="text-sm font-medium uppercase whitespace-nowrap text-zinc-200">
           {match.awayTeam.code}
         </span>
-        <img
-          src={`https://flagcdn.com/w40/${match.awayTeam.flagCode}.png`}
+        <FlagImage
+          code={match.awayTeam.code}
           alt={match.awayTeam.name}
-          className="h-4 w-6 object-cover rounded-sm"
+          className="h-4 w-6"
         />
       </div>
       <span className="text-xs whitespace-nowrap text-zinc-200">

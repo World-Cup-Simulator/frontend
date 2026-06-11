@@ -1,0 +1,1 @@
+export { GroupCarousel } from './GroupCarousel';
