@@ -1,8 +1,9 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { FlagImage } from '../../shared/components/FlagImage';
 import { getGroupMatches } from '../../shared/data/teams';
 import { usePredictor } from '../../features/prediction/hooks/usePredictor';
 import { ThirdPlacesModal } from '../../features/prediction/components/ThirdPlacesModal';
+import { TournamentBracket } from '../../features/prediction/components/TournamentBracket';
 import { LoadingOverlay } from '../../features/tournament/components/GroupCarousel/LoadingOverlay';
 
 export const PredictPage = () => {
@@ -25,6 +26,12 @@ export const PredictPage = () => {
     toggleThirdPlace,
     handleBuildBrackets,
     confirmThirdPlaces,
+    bracketMatches,
+    bracketChampion,
+    advanceTeam,
+    updateBracketScore,
+    resetBracket,
+    resetAllPredictions,
   } = usePredictor();
 
   const thirdPlaceTeams = getThirdPlaceTeams();
@@ -111,7 +118,7 @@ export const PredictPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {groupsData.map((group, groupIndex) => (
                 <GroupPredictor
-                  key={group.groupCode}
+                  key={`${group.groupCode}-${resultsMode}`}
                   group={group}
                   groupIndex={groupIndex}
                   resultsMode={resultsMode}
@@ -148,20 +155,16 @@ export const PredictPage = () => {
 
         {/* Brackets Tab */}
         {activeTab === 'brackets' && (
-          <div className="flex flex-col items-center justify-center gap-4 py-20">
-            <div className="w-full max-w-4xl h-96 bg-zinc-800/30 rounded-2xl border border-zinc-700/50 flex items-center justify-center">
-              <span className="text-zinc-500 font-medium">
-                Bracket View Placeholder
-              </span>
-            </div>
-            <button
-              type="button"
-              className="px-6 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-medium rounded-xl border border-zinc-700/50 transition-all duration-200"
-              onClick={() => setActiveTab('groups')}
-            >
-              Volver a Grupos
-            </button>
-          </div>
+          <TournamentBracket
+            bracketMatches={bracketMatches}
+            bracketChampion={bracketChampion}
+            resultsMode={resultsMode}
+            advanceTeam={advanceTeam}
+            updateBracketScore={updateBracketScore}
+            resetBracket={resetBracket}
+            resetAllPredictions={resetAllPredictions}
+            onGoToGroups={() => setActiveTab('groups')}
+          />
         )}
       </div>
 
@@ -214,11 +217,6 @@ const GroupPredictor = ({
 }: GroupPredictorProps) => {
   const [inputValues, setInputValues] = useState<Record<string, { goalsA: string; goalsB: string }>>({});
 
-  // Reset local inputs when switching results mode
-  useEffect(() => {
-    setInputValues({});
-  }, [resultsMode]);
-
   const handleInputChange = useCallback((matchId: string, field: 'goalsA' | 'goalsB', rawValue: string) => {
     const digitsOnly = rawValue.replace(/\D/g, '');
     const num = digitsOnly === '' ? 0 : parseInt(digitsOnly, 10);
@@ -236,9 +234,11 @@ const GroupPredictor = ({
       };
 
       const match = updated[matchId];
-      const goalsA = match.goalsA === '' ? 0 : parseInt(match.goalsA, 10);
-      const goalsB = match.goalsB === '' ? 0 : parseInt(match.goalsB, 10);
-      onScoreChange(matchId, goalsA, goalsB);
+      if (match.goalsA !== '' || match.goalsB !== '') {
+        const goalsA = match.goalsA === '' ? 0 : parseInt(match.goalsA, 10);
+        const goalsB = match.goalsB === '' ? 0 : parseInt(match.goalsB, 10);
+        onScoreChange(matchId, goalsA, goalsB);
+      }
 
       return updated;
     });
