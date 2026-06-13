@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GroupData, MatchSummary } from '../../models';
 import { CarouselView } from './CarouselView';
 import { ExpandedView } from './ExpandedView';
-import { LoadingOverlay } from './LoadingOverlay';
+import { LoadingOverlay } from '../../../../shared/components/LoadingOverlay';
 
 interface GroupCarouselProps {
   groups: GroupData[];

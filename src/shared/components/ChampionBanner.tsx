@@ -1,7 +1,7 @@
-import type { BracketTeam } from '../../models';
+import type { Team } from '../models';
 
 interface ChampionBannerProps {
-  champion: BracketTeam;
+  champion: Team;
 }
 
 export const ChampionBanner = ({ champion }: ChampionBannerProps) => {

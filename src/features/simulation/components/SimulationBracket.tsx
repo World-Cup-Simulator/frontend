@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { SimulationMatchNode } from './SimulationMatchNode';
-import { ChampionBanner } from '../../prediction/components/TournamentBracket/ChampionBanner';
+import { ChampionBanner } from '../../../shared/components/ChampionBanner';
 import type { SimulatedBracket, SimulatedMatch } from '../models';
 
 const stageLabels: Record<number, string> = {

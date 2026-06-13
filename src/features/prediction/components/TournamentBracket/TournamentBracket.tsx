@@ -1,15 +1,8 @@
 import { useState } from 'react';
 import { MatchNode } from './MatchNode';
-import { ChampionBanner } from './ChampionBanner';
+import { ChampionBanner } from '../../../../shared/components/ChampionBanner';
 import type { BracketMatch, BracketTeam } from '../../models';
-
-const stageLabels: Record<number, string> = {
-  1: '16.º de final',
-  2: '8.º de final',
-  3: '4.º de final',
-  4: 'Semifinal',
-  5: 'Final',
-};
+import { stageLabels, collectMatches } from '../../utils/bracketViewUtils';
 
 interface TournamentBracketProps {
   bracketMatches: Record<string, BracketMatch>;
@@ -32,27 +25,23 @@ export const TournamentBracket = ({
   resetAllPredictions,
   onGoToGroups,
 }: TournamentBracketProps) => {
-
   const [mobileRound, setMobileRound] = useState(1);
 
   const hasBracket = Object.keys(bracketMatches).length > 0;
 
-  const getMatch = (stage: number, key: number): BracketMatch | undefined =>
-    bracketMatches[`${stage}-${key}`];
+  const topR32 = collectMatches(bracketMatches, 1, [1, 2, 3, 4, 5, 6, 7, 8]);
+  const topR16 = collectMatches(bracketMatches, 2, [1, 2, 3, 4]);
+  const topQF = collectMatches(bracketMatches, 3, [1, 2]);
+  const topSF = collectMatches(bracketMatches, 4, [1]);
 
-  const topR32 = ([1, 2, 3, 4, 5, 6, 7, 8].map((k) => getMatch(1, k)).filter(Boolean) as BracketMatch[]);
-  const topR16 = ([1, 2, 3, 4].map((k) => getMatch(2, k)).filter(Boolean) as BracketMatch[]);
-  const topQF = ([1, 2].map((k) => getMatch(3, k)).filter(Boolean) as BracketMatch[]);
-  const topSF = ([1].map((k) => getMatch(4, k)).filter(Boolean) as BracketMatch[]);
+  const botR32 = collectMatches(bracketMatches, 1, [9, 10, 11, 12, 13, 14, 15, 16]);
+  const botR16 = collectMatches(bracketMatches, 2, [5, 6, 7, 8]);
+  const botQF = collectMatches(bracketMatches, 3, [3, 4]);
+  const botSF = collectMatches(bracketMatches, 4, [2]);
 
-  const botR32 = ([9, 10, 11, 12, 13, 14, 15, 16].map((k) => getMatch(1, k)).filter(Boolean) as BracketMatch[]);
-  const botR16 = ([5, 6, 7, 8].map((k) => getMatch(2, k)).filter(Boolean) as BracketMatch[]);
-  const botQF = ([3, 4].map((k) => getMatch(3, k)).filter(Boolean) as BracketMatch[]);
-  const botSF = ([2].map((k) => getMatch(4, k)).filter(Boolean) as BracketMatch[]);
+  const finalMatch = bracketMatches['5-1'];
 
-  const finalMatch = getMatch(5, 1);
-
-  const mobileMatches = (Object.values(bracketMatches) as BracketMatch[]).filter((m) => m.stage === mobileRound);
+  const mobileMatches = Object.values(bracketMatches).filter((m) => m.stage === mobileRound);
 
   if (!hasBracket) {
     return (
