@@ -1,7 +1,7 @@
 import { useSimulator } from '../../features/simulation/hooks/useSimulator';
 import { SimulationGroupView } from '../../features/simulation/components/SimulationGroupView';
 import { SimulationBracket } from '../../features/simulation/components/SimulationBracket';
-import { LoadingOverlay } from '../../features/tournament/components/GroupCarousel/LoadingOverlay';
+import { LoadingOverlay } from '../../shared/components/LoadingOverlay';
 
 export const SimulationPage = () => {
   const {

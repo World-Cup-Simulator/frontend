@@ -1,6 +1,12 @@
 import { useState, useCallback, useMemo } from 'react';
 import { getAllGroups, getGroupMatches } from '../../../shared/data/teams';
-import type { SimulatedGroup, SimulatedBracket, SimulatedMatch, SimulationPhase, SimulationMode } from '../models';
+import type { SimulatedGroup, SimulatedBracket, SimulationPhase, SimulationMode } from '../models';
+import {
+  buildRandomGroupMatch,
+  buildRandomKnockoutMatch,
+  getMatchCountForStage,
+} from '../utils/simMatchUtils';
+import { createEmptySimStandings, applySimMatchResult, sortSimStandings } from '../utils/simStandingsUtils';
 
 type ActiveTab = 'groups' | 'brackets';
 type ResultsMode = 'with-results' | 'no-results';
@@ -25,11 +31,9 @@ export const useSimulator = () => {
 
   const handleResultsModeChange = useCallback((mode: ResultsMode) => {
     setResultsMode(mode);
-    // Constraint: no-results forces simple mode
     if (mode === 'no-results') {
       setSimulationMode('simple');
     }
-    // Reset simulation if already run and user changes mode
     if (phase !== 'idle') {
       resetToIdle();
     }
@@ -37,76 +41,30 @@ export const useSimulator = () => {
 
   const handleSimulationModeChange = useCallback((mode: SimulationMode) => {
     setSimulationMode(mode);
-    // Constraint: adaptive mode forces with-results
     if (mode === 'adaptive') {
       setResultsMode('with-results');
     }
-    // Reset simulation if already run and user changes mode
     if (phase !== 'idle') {
       resetToIdle();
     }
   }, [phase, resetToIdle]);
 
-  // Mock group simulation
+  /** Run a mock group stage and derive standings from the random results. */
   const simulateGroups = useCallback(() => {
     setViewState('loading');
 
     setTimeout(() => {
       const simulated: SimulatedGroup[] = groupsData.map((group) => {
         const matches = getGroupMatches(groupsData.indexOf(group));
-        const simulatedMatches: SimulatedMatch[] = matches.map((m) => {
-          const goalsA = Math.floor(Math.random() * 4);
-          const goalsB = Math.floor(Math.random() * 4);
-          let winner: 'A' | 'B' | 'draw';
-          if (goalsA > goalsB) winner = 'A';
-          else if (goalsB > goalsA) winner = 'B';
-          else winner = 'draw';
 
-          return {
-            matchId: m.matchId,
-            groupCode: group.groupCode,
-            teamA: m.teamA.code,
-            teamB: m.teamB.code,
-            goalsA,
-            goalsB,
-            winner,
-            date: m.date,
-            outcomeProbability: Math.floor(Math.random() * 40) + 50,
-            scoreProbability: Math.floor(Math.random() * 30) + 10,
-            decidedByPenalties: false,
-            teamAWinProbability: Math.floor(Math.random() * 40) + 30,
-            teamBWinProbability: Math.floor(Math.random() * 40) + 30,
-          };
-        });
+        const simulatedMatches = matches.map((m) =>
+          buildRandomGroupMatch(m.matchId, m.teamA.code, m.teamB.code, m.date, group.groupCode)
+        );
 
-        // Calculate standings from simulated matches
-        const standings: Record<string, { code: string; points: number; gf: number; gc: number; dg: number }> = {};
-        group.teams.forEach((t) => {
-          standings[t.code] = { code: t.code, points: 0, gf: 0, gc: 0, dg: 0 };
-        });
+        const standings = createEmptySimStandings(group.teams);
+        simulatedMatches.forEach((m) => applySimMatchResult(standings, m));
 
-        simulatedMatches.forEach((m) => {
-          const teamA = standings[m.teamA];
-          const teamB = standings[m.teamB];
-          if (!teamA || !teamB) return;
-
-          teamA.gf += m.goalsA;
-          teamA.gc += m.goalsB;
-          teamB.gf += m.goalsB;
-          teamB.gc += m.goalsA;
-
-          if (m.winner === 'A') teamA.points += 3;
-          else if (m.winner === 'B') teamB.points += 3;
-          else { teamA.points += 1; teamB.points += 1; }
-        });
-
-        Object.values(standings).forEach((s) => { s.dg = s.gf - s.gc; });
-
-        const sorted = Object.values(standings).sort((a, b) => {
-          if (b.points !== a.points) return b.points - a.points;
-          if (b.dg !== a.dg) return b.dg - a.dg;
-          return b.gf - a.gf;
-        });
+        const sorted = sortSimStandings(standings);
 
         return {
           groupCode: group.groupCode,
@@ -129,39 +87,24 @@ export const useSimulator = () => {
     }, 1200);
   }, [groupsData]);
 
-  // Mock bracket simulation
+  /** Run a mock knockout stage with randomised bracket results. */
   const simulateBrackets = useCallback(() => {
     setViewState('loading');
 
     setTimeout(() => {
       const champion = groupsData[0].teams[0].code;
-      const matches: Record<string, SimulatedMatch> = {};
+      const matches: Record<string, import('../models').SimulatedMatch> = {};
 
-      for (let i = 1; i <= 5; i++) {
-        const matchCount = i === 1 ? 16 : i === 2 ? 8 : i === 3 ? 4 : i === 4 ? 2 : 1;
-        for (let k = 1; k <= matchCount; k++) {
-          const id = `${i}-${k}`;
-          const goalsA = Math.floor(Math.random() * 3);
-          const goalsB = Math.floor(Math.random() * 3);
-          let winner: 'A' | 'B' | 'draw';
-          if (goalsA > goalsB) winner = 'A';
-          else if (goalsB > goalsA) winner = 'B';
-          else winner = 'draw';
-
-          matches[id] = {
-            matchId: id,
-            teamA: groupsData[0].teams[0].code,
-            teamB: groupsData[1].teams[0].code,
-            goalsA,
-            goalsB,
-            winner,
-            date: '2026-07-01',
-            outcomeProbability: Math.floor(Math.random() * 40) + 50,
-            scoreProbability: Math.floor(Math.random() * 30) + 10,
-            decidedByPenalties: winner === 'draw' && Math.random() > 0.5,
-            teamAWinProbability: Math.floor(Math.random() * 40) + 30,
-            teamBWinProbability: Math.floor(Math.random() * 40) + 30,
-          };
+      for (let stage = 1; stage <= 5; stage++) {
+        const matchCount = getMatchCountForStage(stage);
+        for (let key = 1; key <= matchCount; key++) {
+          const id = `${stage}-${key}`;
+          matches[id] = buildRandomKnockoutMatch(
+            id,
+            groupsData[0].teams[0].code,
+            groupsData[1].teams[0].code,
+            '2026-07-01'
+          );
         }
       }
 
@@ -186,11 +129,15 @@ export const useSimulator = () => {
   const handleSimulate = useCallback(() => {
     if (phase === 'idle') {
       simulateGroups();
-    } else if (phase === 'groups-simulated') {
-      simulateBrackets();
-    } else {
-      resetSimulation();
+      return;
     }
+
+    if (phase === 'groups-simulated') {
+      simulateBrackets();
+      return;
+    }
+
+    resetSimulation();
   }, [phase, simulateGroups, simulateBrackets, resetSimulation]);
 
   const buttonLabel = useMemo(() => {

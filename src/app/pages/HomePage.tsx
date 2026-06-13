@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TickerTape } from '../../shared/components/TickerTape';
 import type { MatchTick } from '../../shared/models';
-import { GroupCarousel } from '../../features/tournament/components/GroupCarousel';
-import type { GroupData, MatchSummary } from '../../features/tournament/models';
+import { GroupCarousel } from '../../features/home/components/GroupCarousel';
+import type { GroupData, MatchSummary } from '../../features/home/models';
 
 const teams = [
   { name: 'Argentina', code: 'ARG', flagCode: 'ar' },

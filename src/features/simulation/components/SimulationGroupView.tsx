@@ -1,5 +1,6 @@
 import { FlagImage } from '../../../shared/components/FlagImage';
 import type { SimulatedGroup, SimulatedMatch } from '../models';
+import { MatchCard } from './MatchCard';
 
 interface SimulationGroupViewProps {
   group: { groupCode: string; teams: { code: string; name: string; flagCode: string }[] };
@@ -7,27 +8,47 @@ interface SimulationGroupViewProps {
   resultsMode: 'with-results' | 'no-results';
 }
 
+/** Map a standing position to a Tailwind background highlight class. */
+const getRowBg = (position: number): string => {
+  if (position === 0) return 'bg-yellow-500/15';
+  if (position === 1) return 'bg-zinc-400/15';
+  if (position === 2) return 'bg-amber-700/20';
+  return '';
+};
+
+/** Generate placeholder matches for an un-simulated group. */
+const getEmptyMatches = (
+  group: { groupCode: string; teams: { code: string; name: string; flagCode: string }[] }
+): SimulatedMatch[] => {
+  const matchups = [
+    [0, 1], [2, 3], [0, 2], [1, 3], [0, 3], [1, 2],
+  ];
+  return matchups.map((matchup, index) => ({
+    matchId: `match-${group.groupCode}-${index}`,
+    groupCode: group.groupCode,
+    teamA: group.teams[matchup[0]].code,
+    teamB: group.teams[matchup[1]].code,
+    goalsA: 0,
+    goalsB: 0,
+    winner: 'draw' as const,
+    date: '',
+    outcomeProbability: 0,
+    scoreProbability: 0,
+    decidedByPenalties: false,
+    teamAWinProbability: 0,
+    teamBWinProbability: 0,
+  }));
+};
+
 export const SimulationGroupView = ({ group, simulatedGroup, resultsMode }: SimulationGroupViewProps) => {
   const getTeamInfo = (code: string) => group.teams.find((t) => t.code === code);
-
-  const getWinner = (match: SimulatedMatch) => {
-    if (match.winner === 'A') return match.teamA;
-    if (match.winner === 'B') return match.teamB;
-    return null;
-  };
-
-  const getRowBg = (position: number) => {
-    if (position === 0) return 'bg-yellow-500/15';
-    if (position === 1) return 'bg-zinc-400/15';
-    if (position === 2) return 'bg-amber-700/20';
-    return '';
-  };
 
   const tableGridCols = resultsMode === 'with-results'
     ? 'grid-cols-[28px_1fr_36px_36px_36px_36px]'
     : 'grid-cols-[28px_1fr_36px]';
 
   const hasSimulation = !!simulatedGroup;
+  const matches = hasSimulation ? simulatedGroup.matches : getEmptyMatches(group);
 
   return (
     <div className="flex flex-col bg-zinc-800/50 rounded-2xl border border-zinc-700/50 overflow-hidden">
@@ -103,82 +124,17 @@ export const SimulationGroupView = ({ group, simulatedGroup, resultsMode }: Simu
       {/* Matches - Always visible */}
       <div className="px-4 py-3 border-t border-zinc-700/50">
         <div className="flex flex-col gap-2">
-          {(hasSimulation ? simulatedGroup.matches : getEmptyMatches(group)).map((match) => {
-            const teamA = getTeamInfo(match.teamA);
-            const teamB = getTeamInfo(match.teamB);
-            const winner = hasSimulation ? getWinner(match) : null;
-
-            return (
-              <div key={match.matchId} className="bg-zinc-800 rounded-lg border border-zinc-700/50 overflow-hidden">
-                {/* Main row: [Flag Name Score Name Flag] */}
-                <div className="flex items-center justify-between px-3 py-2">
-                  {/* Team A side */}
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    {teamA && <FlagImage code={teamA.code} alt={teamA.name} className="h-3.5 w-5 shrink-0" />}
-                    <span className={`text-xs font-medium truncate ${hasSimulation && winner === match.teamA ? 'text-emerald-300' : 'text-zinc-300'}`}>
-                      {teamA?.name || match.teamA}
-                    </span>
-                  </div>
-
-                  {/* Center: Score or VS */}
-                  <div className="flex items-center gap-2 px-2 shrink-0">
-                    {hasSimulation && resultsMode === 'with-results' ? (
-                      <span className="text-sm font-bold text-zinc-100">
-                        {match.goalsA} - {match.goalsB}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-zinc-500 font-medium">vs</span>
-                    )}
-                  </div>
-
-                  {/* Team B side */}
-                  <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-                    <span className={`text-xs font-medium truncate text-right ${hasSimulation && winner === match.teamB ? 'text-emerald-300' : 'text-zinc-300'}`}>
-                      {teamB?.name || match.teamB}
-                    </span>
-                    {teamB && <FlagImage code={teamB.code} alt={teamB.name} className="h-3.5 w-5 shrink-0" />}
-                  </div>
-                </div>
-
-                {/* Sub-row: probabilities (only when simulated) */}
-                {hasSimulation && (
-                  <div className="px-3 py-1.5 bg-zinc-900/50 border-t border-zinc-700/50 flex items-center justify-between">
-                    <span className="text-[10px] text-zinc-400">
-                      Resultado: {match.outcomeProbability}%
-                    </span>
-                    {resultsMode === 'with-results' && (
-                      <span className="text-[10px] text-zinc-400">
-                        Marcador: {match.scoreProbability}%
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {matches.map((match) => (
+            <MatchCard
+              key={match.matchId}
+              match={match}
+              getTeamInfo={getTeamInfo}
+              hasSimulation={hasSimulation}
+              resultsMode={resultsMode}
+            />
+          ))}
         </div>
       </div>
     </div>
   );
 };
-
-function getEmptyMatches(group: { groupCode: string; teams: { code: string; name: string; flagCode: string }[] }) {
-  const matchups = [
-    [0, 1], [2, 3], [0, 2], [1, 3], [0, 3], [1, 2],
-  ];
-  return matchups.map((matchup, index) => ({
-    matchId: `match-${group.groupCode}-${index}`,
-    groupCode: group.groupCode,
-    teamA: group.teams[matchup[0]].code,
-    teamB: group.teams[matchup[1]].code,
-    goalsA: 0,
-    goalsB: 0,
-    winner: 'draw' as const,
-    date: '',
-    outcomeProbability: 0,
-    scoreProbability: 0,
-    decidedByPenalties: false,
-    teamAWinProbability: 0,
-    teamBWinProbability: 0,
-  }));
-}
