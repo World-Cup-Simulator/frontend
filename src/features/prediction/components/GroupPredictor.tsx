@@ -1,34 +1,36 @@
 import { useState, useCallback } from 'react';
 import { FlagImage } from '../../../shared/components/FlagImage';
-import { getGroupMatches } from '../../../shared/data/teams';
 import type { TeamStanding } from '../models';
 import { getRowBg, sanitizeScoreInput } from '../utils/predictionPageUtils';
+import type { HookMatch } from '../utils/predictionMapper';
 
 type ResultsMode = 'with-results' | 'no-results';
 
 interface GroupPredictorProps {
   group: { groupCode: string; teams: { code: string; name: string; flagCode: string }[] };
   groupIndex: number;
+  matches: HookMatch[];
   resultsMode: ResultsMode;
   clickOrders: Record<string, string[]>;
   onTeamClick: (groupCode: string, teamCode: string) => void;
-  onScoreChange: (matchId: string, goalsA: number, goalsB: number) => void;
+  onScoreChange: (matchId: number, goalsA: number, goalsB: number) => void;
   calculateStandings: (groupIndex: number) => TeamStanding[];
 }
 
 export const GroupPredictor = ({
   group,
   groupIndex,
+  matches,
   resultsMode,
   clickOrders,
   onTeamClick,
   onScoreChange,
   calculateStandings,
 }: GroupPredictorProps) => {
-  const [inputValues, setInputValues] = useState<Record<string, { goalsA: string; goalsB: string }>>({});
+  const [inputValues, setInputValues] = useState<Record<number, { goalsA: string; goalsB: string }>>({});
 
   /** Update a single score input and notify parent when both sides are filled. */
-  const handleInputChange = useCallback((matchId: string, field: 'goalsA' | 'goalsB', rawValue: string) => {
+  const handleInputChange = useCallback((matchId: number, field: 'goalsA' | 'goalsB', rawValue: string) => {
     const { display } = sanitizeScoreInput(rawValue);
 
     setInputValues((prev) => {
@@ -50,7 +52,6 @@ export const GroupPredictor = ({
   }, [onScoreChange]);
 
   const standings = calculateStandings(groupIndex);
-  const matches = getGroupMatches(groupIndex);
   const order = clickOrders[group.groupCode] || [];
 
   const isClickable = resultsMode === 'no-results';
@@ -109,6 +110,7 @@ export const GroupPredictor = ({
             <button
               key={row.teamCode}
               type="button"
+              tabIndex={-1}
               className={`grid ${tableGridCols} gap-2 items-center w-full py-1.5 px-1 text-left transition-all duration-200 rounded-lg
                 ${isClickable ? 'cursor-pointer hover:bg-zinc-700/30' : 'cursor-default'}
                 ${highlightClass}

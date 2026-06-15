@@ -13,19 +13,6 @@ export const CarouselView = ({ groups, matches, activeIndex, onNavigate }: Carou
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
 
-  const getIndices = () => {
-    const total = groups.length;
-    return [
-      (activeIndex - 2 + total) % total,
-      (activeIndex - 1 + total) % total,
-      activeIndex,
-      (activeIndex + 1) % total,
-      (activeIndex + 2) % total,
-    ];
-  };
-
-  const indices = getIndices();
-
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
   }, []);
@@ -51,6 +38,24 @@ export const CarouselView = ({ groups, matches, activeIndex, onNavigate }: Carou
     touchStartX.current = null;
     touchEndX.current = null;
   }, [activeIndex, groups.length, onNavigate]);
+
+  // Guard against empty groups - must be after all hooks
+  if (groups.length === 0) {
+    return <div className="relative h-[520px] w-full" />;
+  }
+
+  const getIndices = () => {
+    const total = groups.length;
+    return [
+      (activeIndex - 2 + total) % total,
+      (activeIndex - 1 + total) % total,
+      activeIndex,
+      (activeIndex + 1) % total,
+      (activeIndex + 2) % total,
+    ];
+  };
+
+  const indices = getIndices();
 
   const getCardStyle = (offset: number) => {
     const baseClasses = 'absolute top-1/2 -translate-y-1/2 transition-all duration-500 ease-out';

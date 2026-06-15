@@ -1,5 +1,5 @@
 import './TickerTape.css';
-import type { MatchTick, TickerTapeProps } from '../../models';
+import type { MatchTick, TickerTapeProps } from '../../models/tickerTypes';
 import { FlagImage } from '../FlagImage';
 
 const TickerItem = ({ match }: { match: MatchTick }) => {

@@ -10,3 +10,12 @@ export {
   applySimMatchResult,
   sortSimStandings,
 } from './simStandingsUtils';
+
+export {
+  mapGroupsResponseToSimulatedGroups,
+  mapFinalsResponseToSimulatedBracket,
+  mapGroupResultToSimulatedMatch,
+  mapFinalsResultToSimulatedMatch,
+  convertMatchId,
+  getTeamInfoWithFlag,
+} from './simulationMapper';
