@@ -14,6 +14,9 @@ export const PredictPage = () => {
     isThirdPlacesModalOpen,
     setIsThirdPlacesModalOpen,
     groupsData,
+    matchesData,
+    loading,
+    error,
     clickOrders,
     selectedThirdPlaces,
     isReadyForBrackets,
@@ -113,41 +116,60 @@ export const PredictPage = () => {
             </div>
 
             {/* Groups */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {groupsData.map((group, groupIndex) => (
-                <GroupPredictor
-                  key={`${group.groupCode}-${resultsMode}`}
-                  group={group}
-                  groupIndex={groupIndex}
-                  resultsMode={resultsMode}
-                  clickOrders={clickOrders}
-                  onTeamClick={handleTeamClick}
-                  onScoreChange={handleScoreChange}
-                  calculateStandings={calculateStandings}
-                />
-              ))}
+            <div className="flex flex-col gap-6 relative min-h-[400px]">
+              {loading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/50 backdrop-blur-sm rounded-2xl z-20">
+                  <LoadingOverlay />
+                </div>
+              )}
+
+              {error ? (
+                <div className="flex flex-col items-center justify-center py-16 text-zinc-400 bg-zinc-800/30 rounded-2xl border border-zinc-700/50">
+                  <span className="text-5xl mb-3">🚧</span>
+                  <p className="text-base font-medium text-zinc-300 mb-1">No se pudo obtener los datos de los grupos</p>
+                  <p className="text-sm text-zinc-500">Por favor intente nuevamente más tarde</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {groupsData.map((group, groupIndex) => (
+                    <GroupPredictor
+                      key={`${group.groupCode}-${resultsMode}`}
+                      group={group}
+                      groupIndex={groupIndex}
+                      matches={matchesData[group.groupCode] || []}
+                      resultsMode={resultsMode}
+                      clickOrders={clickOrders}
+                      onTeamClick={handleTeamClick}
+                      onScoreChange={handleScoreChange}
+                      calculateStandings={calculateStandings}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Build Brackets Button */}
-            <div className="flex justify-center">
-              <button
-                type="button"
-                className={`px-8 py-3 font-medium rounded-xl transition-all duration-200 ease-out shadow-lg
-                  ${isReadyForBrackets
-                    ? 'bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer'
-                    : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'
+            {!error && !loading && (
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  className={`px-8 py-3 font-medium rounded-xl transition-all duration-200 ease-out shadow-lg
+                    ${isReadyForBrackets
+                      ? 'bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer'
+                      : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'
+                    }
+                  `}
+                  onClick={handleBuildBrackets}
+                  disabled={!isReadyForBrackets}
+                  title={isReadyForBrackets ? '' : resultsMode === 'no-results'
+                    ? 'Selecciona el orden de todos los grupos primero'
+                    : 'Completa todos los resultados de los partidos primero'
                   }
-                `}
-                onClick={handleBuildBrackets}
-                disabled={!isReadyForBrackets}
-                title={isReadyForBrackets ? '' : resultsMode === 'no-results'
-                  ? 'Selecciona el orden de todos los grupos primero'
-                  : 'Completa todos los resultados de los partidos primero'
-                }
-              >
-                Armar Llaves
-              </button>
-            </div>
+                >
+                  Armar Llaves
+                </button>
+              </div>
+            )}
           </div>
         )}
 

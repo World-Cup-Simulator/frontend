@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { SimulationMatchNode } from './SimulationMatchNode';
 import { ChampionBanner } from '../../../shared/components/ChampionBanner';
 import type { SimulatedBracket, SimulatedMatch } from '../models';
+import { getFifaCodeFromName } from '../utils/simulationMapper';
+import { getIsoCodeFromFifa } from '../../../shared/utils/flagMapper';
 
 const stageLabels: Record<number, string> = {
   1: '16.º de final',
@@ -39,10 +41,11 @@ export const SimulationBracket = ({ bracketData, resultsMode }: SimulationBracke
     return matchStage === mobileRound;
   });
 
+  const championFifaCode = getFifaCodeFromName(bracketData.champion);
   const championTeam = {
-    code: bracketData.champion,
+    code: championFifaCode,
     name: bracketData.champion,
-    flagCode: bracketData.champion.toLowerCase().slice(0, 2),
+    flagCode: getIsoCodeFromFifa(championFifaCode),
   };
 
   return (

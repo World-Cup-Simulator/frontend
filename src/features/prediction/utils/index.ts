@@ -24,3 +24,11 @@ export {
   stageLabels,
   collectMatches,
 } from './bracketViewUtils';
+
+export {
+  mapApiGroupToHookFormat,
+  mapApiMatchToHookFormat,
+  mapTeamDisplayToHookTeam,
+  type HookGroupData,
+  type HookMatch,
+} from './predictionMapper';

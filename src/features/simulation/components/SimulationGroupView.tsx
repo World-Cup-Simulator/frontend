@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { FlagImage } from '../../../shared/components/FlagImage';
 import type { SimulatedGroup, SimulatedMatch } from '../models';
 import { MatchCard } from './MatchCard';
@@ -41,7 +42,24 @@ const getEmptyMatches = (
 };
 
 export const SimulationGroupView = ({ group, simulatedGroup, resultsMode }: SimulationGroupViewProps) => {
-  const getTeamInfo = (code: string) => group.teams.find((t) => t.code === code);
+  // Build lookup map by team name for post-simulation lookups
+  const teamByName = useMemo(() => {
+    const map: Record<string, typeof group.teams[0]> = {};
+    group.teams.forEach((t) => {
+      map[t.name] = t;
+    });
+    return map;
+  }, [group]);
+
+  // Get team info - use name lookup after simulation, code lookup before
+  const getTeamInfo = (code: string) => {
+    if (simulatedGroup) {
+      // After simulation, code is actually the team name
+      return teamByName[code];
+    }
+    // Before simulation, lookup by FIFA code
+    return group.teams.find((t) => t.code === code);
+  };
 
   const tableGridCols = resultsMode === 'with-results'
     ? 'grid-cols-[28px_1fr_36px_36px_36px_36px]'

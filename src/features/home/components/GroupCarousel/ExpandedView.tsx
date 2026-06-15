@@ -7,6 +7,11 @@ interface ExpandedViewProps {
 }
 
 export const ExpandedView = ({ groups, matches }: ExpandedViewProps) => {
+  // Guard against empty groups
+  if (groups.length === 0) {
+    return <div className="min-h-[520px] w-full" />;
+  }
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {groups.map((group) => (

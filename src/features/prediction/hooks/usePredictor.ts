@@ -1,6 +1,9 @@
-import { useState, useCallback, useMemo } from 'react';
-import { getAllGroups, getGroupMatches } from '../../../shared/data/teams';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { fetchService } from '../../../shared/services/fetchService';
+import type { groupsDisplayResponse } from '../../../shared/models/teamTypes';
+import type { match } from '../../../shared/models/matchTypes';
 import type { ThirdPlaceTeam, BracketMatch, TeamStanding } from '../models';
+import type { groupCode } from '../../../shared/models/teamTypes';
 import {
   createInitialClickOrders,
   findTeamInGroups,
@@ -11,13 +14,14 @@ import {
   selectTopThirdPlaces,
 } from '../utils/bracketUtils';
 import { createEmptyStandings, applyMatchResult, sortStandings } from '../utils/standingsUtils';
+import { mapApiGroupToHookFormat, mapApiMatchToHookFormat, type HookGroupData, type HookMatch } from '../utils/predictionMapper';
 
 type ActiveTab = 'groups' | 'brackets';
 type ResultsMode = 'with-results' | 'no-results';
 type ViewState = 'idle' | 'loading';
 
 interface ScoreEntry {
-  matchId: string;
+  matchId: number;
   goalsA: number;
   goalsB: number;
 }
@@ -28,13 +32,53 @@ export const usePredictor = () => {
   const [viewState, setViewState] = useState<ViewState>('idle');
   const [isThirdPlacesModalOpen, setIsThirdPlacesModalOpen] = useState(false);
 
-  const groupsData = useMemo(() => getAllGroups(), []);
+  // Data states
+  const [groupsData, setGroupsData] = useState<HookGroupData[]>([]);
+  const [matchesData, setMatchesData] = useState<Record<string, HookMatch[]>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  const [clickOrders, setClickOrders] = useState<Record<string, string[]>>(() =>
-    createInitialClickOrders(groupsData)
-  );
+  // Fetch groups and matches on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(false);
 
-  const [scores, setScores] = useState<Record<string, ScoreEntry>>({});
+        // First fetch groups
+        const groupsResponse = await fetchService.groups();
+        const mappedGroups = groupsResponse.data.map((group: groupsDisplayResponse) => mapApiGroupToHookFormat(group));
+        setGroupsData(mappedGroups);
+
+        // Then fetch matches for each group
+        const matchesMap: Record<string, HookMatch[]> = {};
+        for (const group of mappedGroups) {
+          const matchesResponse = await fetchService.groupmatches(group.groupCode as groupCode);
+          matchesMap[group.groupCode] = matchesResponse.data.map((match: match) => mapApiMatchToHookFormat(match));
+        }
+        setMatchesData(matchesMap);
+      } catch {
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Initialize click orders when groups data is loaded - using ref to track initialization
+  const isClickOrdersInitialized = useRef(false);
+  const [clickOrders, setClickOrders] = useState<Record<string, string[]>>({});
+
+  useEffect(() => {
+    if (groupsData.length > 0 && !isClickOrdersInitialized.current) {
+      isClickOrdersInitialized.current = true;
+      setClickOrders(createInitialClickOrders(groupsData));
+    }
+  }, [groupsData]);
+
+  const [scores, setScores] = useState<Record<number, ScoreEntry>>({});
 
   const [selectedThirdPlaces, setSelectedThirdPlaces] = useState<string[]>([]);
 
@@ -62,7 +106,7 @@ export const usePredictor = () => {
     });
   }, []);
 
-  const handleScoreChange = useCallback((matchId: string, goalsA: number, goalsB: number) => {
+  const handleScoreChange = useCallback((matchId: number, goalsA: number, goalsB: number) => {
     setScores((prev) => ({
       ...prev,
       [matchId]: { matchId, goalsA, goalsB },
@@ -72,9 +116,11 @@ export const usePredictor = () => {
   /** Compute the current standings for a group based on entered scores. */
   const calculateStandings = useCallback((groupIndex: number): TeamStanding[] => {
     const group = groupsData[groupIndex];
-    const standings = createEmptyStandings(group.teams);
+    if (!group) return [];
 
-    const matches = getGroupMatches(groupIndex);
+    const standings = createEmptyStandings(group.teams);
+    const matches = matchesData[group.groupCode] || [];
+
     matches.forEach((m) => {
       const score = scores[m.matchId];
       if (!score) return;
@@ -82,15 +128,16 @@ export const usePredictor = () => {
     });
 
     return sortStandings(standings);
-  }, [groupsData, scores]);
+  }, [groupsData, matchesData, scores]);
 
   const isReadyForBrackets = useMemo(() => {
+    if (groupsData.length === 0) return false;
     if (resultsMode === 'no-results') {
       return groupsData.every((g) => (clickOrders[g.groupCode] || []).length === 4);
     }
-    const totalMatches = groupsData.reduce((sum, _, idx) => sum + getGroupMatches(idx).length, 0);
+    const totalMatches = Object.values(matchesData).reduce((sum, matches) => sum + matches.length, 0);
     return Object.keys(scores).length === totalMatches;
-  }, [resultsMode, groupsData, clickOrders, scores]);
+  }, [resultsMode, groupsData, clickOrders, scores, matchesData]);
 
   /** Gather the third-place team from every group, ready for bracket generation. */
   const getThirdPlaceTeams = useCallback((): ThirdPlaceTeam[] => {
@@ -327,6 +374,9 @@ export const usePredictor = () => {
     isThirdPlacesModalOpen,
     setIsThirdPlacesModalOpen,
     groupsData,
+    matchesData,
+    loading,
+    error,
     clickOrders,
     scores,
     selectedThirdPlaces,

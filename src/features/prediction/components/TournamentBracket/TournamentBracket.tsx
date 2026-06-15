@@ -15,6 +15,29 @@ interface TournamentBracketProps {
   onGoToGroups: () => void;
 }
 
+/** Calculate tabIndex for match inputs to ensure logical tab navigation by round */
+const getMatchTabIndices = (stage: number, key: number): { teamA: number; teamB: number } => {
+  // Calculate base offset for each stage
+  // R32 (stage 1): keys 1-16, indices 1-32
+  // R16 (stage 2): keys 1-8, indices 33-48
+  // QF (stage 3): keys 1-4, indices 49-56
+  // SF (stage 4): keys 1-2, indices 57-60
+  // Final (stage 5): key 1, indices 61-62
+  const stageOffsets: Record<number, number> = {
+    1: 0,    // R32 starts at 1
+    2: 32,   // R16 starts at 33
+    3: 48,   // QF starts at 49
+    4: 56,   // SF starts at 57
+    5: 60,   // Final starts at 61
+  };
+
+  const baseOffset = stageOffsets[stage] || 0;
+  const teamAIndex = baseOffset + (key - 1) * 2 + 1;
+  const teamBIndex = baseOffset + (key - 1) * 2 + 2;
+
+  return { teamA: teamAIndex, teamB: teamBIndex };
+};
+
 export const TournamentBracket = ({
   bracketMatches,
   bracketChampion,
@@ -90,27 +113,39 @@ export const TournamentBracket = ({
         {/* Top Half */}
         <div className="flex flex-col gap-2 justify-center">
           <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 text-center mb-1">{stageLabels[1]}</span>
-          {topR32.map((match) => (
-            <MatchNode key={match.id} match={match} mode={resultsMode} onTeamClick={advanceTeam} onScoreChange={updateBracketScore} />
-          ))}
+          {topR32.map((match) => {
+            const indices = getMatchTabIndices(match.stage, match.key);
+            return (
+              <MatchNode key={match.id} match={match} mode={resultsMode} onTeamClick={advanceTeam} onScoreChange={updateBracketScore} teamAInputTabIndex={indices.teamA} teamBInputTabIndex={indices.teamB} />
+            );
+          })}
         </div>
         <div className="flex flex-col gap-6 justify-center">
           <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 text-center mb-1">{stageLabels[2]}</span>
-          {topR16.map((match) => (
-            <MatchNode key={match.id} match={match} mode={resultsMode} onTeamClick={advanceTeam} onScoreChange={updateBracketScore} />
-          ))}
+          {topR16.map((match) => {
+            const indices = getMatchTabIndices(match.stage, match.key);
+            return (
+              <MatchNode key={match.id} match={match} mode={resultsMode} onTeamClick={advanceTeam} onScoreChange={updateBracketScore} teamAInputTabIndex={indices.teamA} teamBInputTabIndex={indices.teamB} />
+            );
+          })}
         </div>
         <div className="flex flex-col gap-12 justify-center">
           <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 text-center mb-1">{stageLabels[3]}</span>
-          {topQF.map((match) => (
-            <MatchNode key={match.id} match={match} mode={resultsMode} onTeamClick={advanceTeam} onScoreChange={updateBracketScore} />
-          ))}
+          {topQF.map((match) => {
+            const indices = getMatchTabIndices(match.stage, match.key);
+            return (
+              <MatchNode key={match.id} match={match} mode={resultsMode} onTeamClick={advanceTeam} onScoreChange={updateBracketScore} teamAInputTabIndex={indices.teamA} teamBInputTabIndex={indices.teamB} />
+            );
+          })}
         </div>
         <div className="flex flex-col gap-24 justify-center">
           <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 text-center mb-1">{stageLabels[4]}</span>
-          {topSF.map((match) => (
-            <MatchNode key={match.id} match={match} mode={resultsMode} onTeamClick={advanceTeam} onScoreChange={updateBracketScore} />
-          ))}
+          {topSF.map((match) => {
+            const indices = getMatchTabIndices(match.stage, match.key);
+            return (
+              <MatchNode key={match.id} match={match} mode={resultsMode} onTeamClick={advanceTeam} onScoreChange={updateBracketScore} teamAInputTabIndex={indices.teamA} teamBInputTabIndex={indices.teamB} />
+            );
+          })}
         </div>
 
         {/* Final – spans both rows and centers vertically */}
@@ -122,6 +157,8 @@ export const TournamentBracket = ({
               mode={resultsMode}
               onTeamClick={advanceTeam}
               onScoreChange={updateBracketScore}
+              teamAInputTabIndex={61}
+              teamBInputTabIndex={62}
             />
           )}
           {bracketChampion && <ChampionBanner champion={bracketChampion} />}
@@ -129,24 +166,36 @@ export const TournamentBracket = ({
 
         {/* Bottom Half */}
         <div className="flex flex-col gap-2 justify-center">
-          {botR32.map((match) => (
-            <MatchNode key={match.id} match={match} mode={resultsMode} onTeamClick={advanceTeam} onScoreChange={updateBracketScore} />
-          ))}
+          {botR32.map((match) => {
+            const indices = getMatchTabIndices(match.stage, match.key);
+            return (
+              <MatchNode key={match.id} match={match} mode={resultsMode} onTeamClick={advanceTeam} onScoreChange={updateBracketScore} teamAInputTabIndex={indices.teamA} teamBInputTabIndex={indices.teamB} />
+            );
+          })}
         </div>
         <div className="flex flex-col gap-6 justify-center">
-          {botR16.map((match) => (
-            <MatchNode key={match.id} match={match} mode={resultsMode} onTeamClick={advanceTeam} onScoreChange={updateBracketScore} />
-          ))}
+          {botR16.map((match) => {
+            const indices = getMatchTabIndices(match.stage, match.key);
+            return (
+              <MatchNode key={match.id} match={match} mode={resultsMode} onTeamClick={advanceTeam} onScoreChange={updateBracketScore} teamAInputTabIndex={indices.teamA} teamBInputTabIndex={indices.teamB} />
+            );
+          })}
         </div>
         <div className="flex flex-col gap-12 justify-center">
-          {botQF.map((match) => (
-            <MatchNode key={match.id} match={match} mode={resultsMode} onTeamClick={advanceTeam} onScoreChange={updateBracketScore} />
-          ))}
+          {botQF.map((match) => {
+            const indices = getMatchTabIndices(match.stage, match.key);
+            return (
+              <MatchNode key={match.id} match={match} mode={resultsMode} onTeamClick={advanceTeam} onScoreChange={updateBracketScore} teamAInputTabIndex={indices.teamA} teamBInputTabIndex={indices.teamB} />
+            );
+          })}
         </div>
         <div className="flex flex-col gap-24 justify-center">
-          {botSF.map((match) => (
-            <MatchNode key={match.id} match={match} mode={resultsMode} onTeamClick={advanceTeam} onScoreChange={updateBracketScore} />
-          ))}
+          {botSF.map((match) => {
+            const indices = getMatchTabIndices(match.stage, match.key);
+            return (
+              <MatchNode key={match.id} match={match} mode={resultsMode} onTeamClick={advanceTeam} onScoreChange={updateBracketScore} teamAInputTabIndex={indices.teamA} teamBInputTabIndex={indices.teamB} />
+            );
+          })}
         </div>
       </div>
 

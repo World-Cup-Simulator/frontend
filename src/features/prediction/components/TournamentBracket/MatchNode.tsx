@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { FlagImage } from '../../../../shared/components/FlagImage';
 import type { BracketMatch } from '../../models';
 
@@ -7,13 +7,31 @@ interface MatchNodeProps {
   mode: 'no-results' | 'with-results';
   onTeamClick: (matchId: string, teamCode: string) => void;
   onScoreChange: (matchId: string, goalsA: number, goalsB: number) => void;
+  teamAInputTabIndex?: number;
+  teamBInputTabIndex?: number;
 }
 
-export const MatchNode = ({ match, mode, onTeamClick, onScoreChange }: MatchNodeProps) => {
+export const MatchNode = ({ match, mode, onTeamClick, onScoreChange, teamAInputTabIndex, teamBInputTabIndex }: MatchNodeProps) => {
   const [inputs, setInputs] = useState(() => ({
     goalsA: match.goalsA !== undefined ? String(match.goalsA) : '',
     goalsB: match.goalsB !== undefined ? String(match.goalsB) : '',
   }));
+
+  // Track previous match values to detect external changes (e.g., reset)
+  const prevMatchRef = useRef({ goalsA: match.goalsA, goalsB: match.goalsB });
+
+  // Sync inputs with parent state when reset or external changes occur
+  useEffect(() => {
+    const prev = prevMatchRef.current;
+    // Only update if match values changed from outside (not from local input)
+    if (prev.goalsA !== match.goalsA || prev.goalsB !== match.goalsB) {
+      setInputs({
+        goalsA: match.goalsA !== undefined ? String(match.goalsA) : '',
+        goalsB: match.goalsB !== undefined ? String(match.goalsB) : '',
+      });
+      prevMatchRef.current = { goalsA: match.goalsA, goalsB: match.goalsB };
+    }
+  }, [match.goalsA, match.goalsB]);
 
   const handleInputChange = useCallback((field: 'goalsA' | 'goalsB', rawValue: string) => {
     const digitsOnly = rawValue.replace(/\D/g, '');
@@ -79,6 +97,7 @@ export const MatchNode = ({ match, mode, onTeamClick, onScoreChange }: MatchNode
             onChange={(e) => handleInputChange('goalsA', e.target.value)}
             onFocus={(e) => e.target.select()}
             onClick={(e) => e.stopPropagation()}
+            tabIndex={teamAInputTabIndex}
             className="w-7 h-6 bg-zinc-900 border border-zinc-700 rounded text-center text-xs font-bold text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shrink-0"
           />
         )}
@@ -125,11 +144,9 @@ export const MatchNode = ({ match, mode, onTeamClick, onScoreChange }: MatchNode
             onChange={(e) => handleInputChange('goalsB', e.target.value)}
             onFocus={(e) => e.target.select()}
             onClick={(e) => e.stopPropagation()}
+            tabIndex={teamBInputTabIndex}
             className="w-7 h-6 bg-zinc-900 border border-zinc-700 rounded text-center text-xs font-bold text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shrink-0"
           />
-        )}
-        {mode === 'no-results' && isWinner(match.teamB?.code) && (
-          <span className="text-amber-400 text-xs font-bold shrink-0">✓</span>
         )}
       </button>
 

@@ -59,11 +59,11 @@ export const MatchCard = ({ match, getTeamInfo, hasSimulation, resultsMode }: Ma
       {hasSimulation && (
         <div className="px-3 py-1.5 bg-zinc-900/50 border-t border-zinc-700/50 flex items-center justify-between">
           <span className="text-[10px] text-zinc-400">
-            Resultado: {match.outcomeProbability}%
+            Resultado: {match.outcomeProbability ? (match.outcomeProbability * 100).toFixed(2) : 0}%
           </span>
           {resultsMode === 'with-results' && (
             <span className="text-[10px] text-zinc-400">
-              Marcador: {match.scoreProbability}%
+              Marcador: {match.scoreProbability ? (match.scoreProbability * 100).toFixed(2) : 0}%
             </span>
           )}
         </div>
