@@ -24,3 +24,13 @@ export interface finalsMatch {
     goalsA: number,
     goalsB: number
 }
+
+export interface thirdPlace {
+    index: number,
+    group: string
+}
+
+export interface thirdPlaceSlot {
+    key: number,
+    index: number
+}

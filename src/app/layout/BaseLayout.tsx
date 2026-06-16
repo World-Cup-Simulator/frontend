@@ -112,9 +112,13 @@ export const BaseLayout = ({ children }: BaseLayoutProps) => {
             </div>
           </div>
 
-          <h1 className="text-lg font-bold tracking-tight text-zinc-100">
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="text-lg font-bold tracking-tight text-zinc-100 hover:text-indigo-400 transition-colors duration-200 cursor-pointer"
+          >
             World Cup Simulator
-          </h1>
+          </button>
         </div>
       </header>
 

@@ -20,6 +20,8 @@ export const PredictPage = () => {
     clickOrders,
     selectedThirdPlaces,
     isReadyForBrackets,
+    isGeneratingBracket,
+    bracketError,
     handleTeamClick,
     handleScoreChange,
     calculateStandings,
@@ -33,13 +35,14 @@ export const PredictPage = () => {
     updateBracketScore,
     resetBracket,
     resetAllPredictions,
+    resetBracketError,
   } = usePredictor();
 
   const thirdPlaceTeams = getThirdPlaceTeams();
 
   return (
     <div className="flex flex-col pt-16 min-h-screen">
-      {viewState === 'loading' && <LoadingOverlay />}
+      {(viewState === 'loading' || isGeneratingBracket) && <LoadingOverlay />}
 
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6">
         {/* Hero */}
@@ -175,16 +178,36 @@ export const PredictPage = () => {
 
         {/* Brackets Tab */}
         {activeTab === 'brackets' && (
-          <TournamentBracket
-            bracketMatches={bracketMatches}
-            bracketChampion={bracketChampion}
-            resultsMode={resultsMode}
-            advanceTeam={advanceTeam}
-            updateBracketScore={updateBracketScore}
-            resetBracket={resetBracket}
-            resetAllPredictions={resetAllPredictions}
-            onGoToGroups={() => setActiveTab('groups')}
-          />
+          <>
+            {bracketError ? (
+              <div className="flex flex-col items-center justify-center py-16 text-zinc-400 bg-zinc-800/30 rounded-2xl border border-zinc-700/50">
+                <span className="text-5xl mb-3">🚧</span>
+                <p className="text-base font-medium text-zinc-300 mb-1">Error al armar las llaves, inténtelo nuevamente</p>
+                <p className="text-sm text-zinc-500 mb-4">No se pudo obtener la configuración de los mejores terceros</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    resetBracketError();
+                    setActiveTab('groups');
+                  }}
+                  className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-all duration-200"
+                >
+                  Volver a Grupos
+                </button>
+              </div>
+            ) : (
+              <TournamentBracket
+                bracketMatches={bracketMatches}
+                bracketChampion={bracketChampion}
+                resultsMode={resultsMode}
+                advanceTeam={advanceTeam}
+                updateBracketScore={updateBracketScore}
+                resetBracket={resetBracket}
+                resetAllPredictions={resetAllPredictions}
+                onGoToGroups={() => setActiveTab('groups')}
+              />
+            )}
+          </>
         )}
       </div>
 
