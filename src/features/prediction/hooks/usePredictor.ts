@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { fetchService } from '../../../shared/services/fetchService';
 import type { groupsDisplayResponse } from '../../../shared/models/teamTypes';
 import type { match } from '../../../shared/models/matchTypes';
-import type { ThirdPlaceTeam, BracketMatch, TeamStanding } from '../models';
+import type { ThirdPlaceTeam, BracketMatch, TeamStanding, ThirdPlaceInput, ThirdPlaceSlot } from '../models';
 import type { groupCode } from '../../../shared/models/teamTypes';
 import {
   createInitialClickOrders,
@@ -83,6 +83,8 @@ export const usePredictor = () => {
   const [selectedThirdPlaces, setSelectedThirdPlaces] = useState<string[]>([]);
 
   const [bracketMatches, setBracketMatches] = useState<Record<string, BracketMatch>>({});
+  const [isGeneratingBracket, setIsGeneratingBracket] = useState(false);
+  const [bracketError, setBracketError] = useState(false);
 
   const handleResultsModeChange = useCallback((mode: ResultsMode) => {
     setResultsMode(mode);
@@ -196,36 +198,39 @@ export const usePredictor = () => {
   /* ------------------------------------------------------------------ */
 
   /** Generate the full bracket tree given the 8 advancing third-place teams. */
-  const generateBracket = useCallback((thirdPlaceCodes: string[]) => {
+  const generateBracket = useCallback((slots: ThirdPlaceSlot[], thirdPlacesData: ThirdPlaceTeam[]) => {
     const matches = buildEmptyBracket();
 
     const r32Defs = [
-      { key: 1, teamASource: '1E', teamBSource: '3', thirdPlaceIdx: 0, nextMatchId: '2-1' },
-      { key: 2, teamASource: '1I', teamBSource: '3', thirdPlaceIdx: 1, nextMatchId: '2-1' },
+      { key: 1, teamASource: '1E', teamBSource: '3', nextMatchId: '2-1' },
+      { key: 2, teamASource: '1I', teamBSource: '3', nextMatchId: '2-1' },
       { key: 3, teamASource: '2A', teamBSource: '2B', nextMatchId: '2-2' },
       { key: 4, teamASource: '1F', teamBSource: '2C', nextMatchId: '2-2' },
       { key: 5, teamASource: '2K', teamBSource: '2L', nextMatchId: '2-3' },
       { key: 6, teamASource: '1H', teamBSource: '2J', nextMatchId: '2-3' },
-      { key: 7, teamASource: '1D', teamBSource: '3', thirdPlaceIdx: 2, nextMatchId: '2-4' },
-      { key: 8, teamASource: '1G', teamBSource: '3', thirdPlaceIdx: 3, nextMatchId: '2-4' },
+      { key: 7, teamASource: '1D', teamBSource: '3', nextMatchId: '2-4' },
+      { key: 8, teamASource: '1G', teamBSource: '3', nextMatchId: '2-4' },
       { key: 9, teamASource: '1C', teamBSource: '2F', nextMatchId: '2-5' },
       { key: 10, teamASource: '2E', teamBSource: '2I', nextMatchId: '2-5' },
-      { key: 11, teamASource: '1A', teamBSource: '3', thirdPlaceIdx: 4, nextMatchId: '2-6' },
-      { key: 12, teamASource: '1L', teamBSource: '3', thirdPlaceIdx: 5, nextMatchId: '2-6' },
+      { key: 11, teamASource: '1A', teamBSource: '3', nextMatchId: '2-6' },
+      { key: 12, teamASource: '1L', teamBSource: '3', nextMatchId: '2-6' },
       { key: 13, teamASource: '1J', teamBSource: '2H', nextMatchId: '2-7' },
       { key: 14, teamASource: '2D', teamBSource: '2G', nextMatchId: '2-7' },
-      { key: 15, teamASource: '1B', teamBSource: '3', thirdPlaceIdx: 6, nextMatchId: '2-8' },
-      { key: 16, teamASource: '1K', teamBSource: '3', thirdPlaceIdx: 7, nextMatchId: '2-8' },
+      { key: 15, teamASource: '1B', teamBSource: '3', nextMatchId: '2-8' },
+      { key: 16, teamASource: '1K', teamBSource: '3', nextMatchId: '2-8' },
     ];
 
     r32Defs.forEach((def) => {
       const id = `1-${def.key}`;
       const teamA = resolveTeamFromSource(def.teamASource, groupsData, clickOrders, resultsMode, calculateStandings);
-      const teamB = def.thirdPlaceIdx !== undefined
-        ? findTeamInGroups(thirdPlaceCodes[def.thirdPlaceIdx], groupsData)
+
+      // Check if this match has a third-place team assigned via API
+      const slotAssignment = slots.find(s => s.key === def.key);
+      const teamB = slotAssignment !== undefined
+        ? findTeamInGroups(thirdPlacesData[slotAssignment.index]?.teamCode, groupsData)
         : resolveTeamFromSource(def.teamBSource, groupsData, clickOrders, resultsMode, calculateStandings);
 
-      const teamBSourceLabel = def.thirdPlaceIdx !== undefined
+      const teamBSourceLabel = slotAssignment !== undefined
         ? (teamB ? `3${findGroupCodeForTeam(teamB.code, groupsData)}` : '3')
         : def.teamBSource;
 
@@ -328,7 +333,7 @@ export const usePredictor = () => {
   }, [groupsData]);
 
   /** Orchestrate the transition from group phase to bracket phase. */
-  const handleBuildBrackets = useCallback(() => {
+  const handleBuildBrackets = useCallback(async () => {
     if (!isReadyForBrackets) return;
 
     if (resultsMode === 'no-results') {
@@ -336,34 +341,96 @@ export const usePredictor = () => {
       return;
     }
 
-    const thirdPlaces = getThirdPlaceTeams();
-    const autoSelected = selectTopThirdPlaces(thirdPlaces);
+    setIsGeneratingBracket(true);
+    setBracketError(false);
 
-    setSelectedThirdPlaces(autoSelected);
-    generateBracket(autoSelected);
-    setViewState('loading');
-    setTimeout(() => {
+    try {
+      // Get all third-place teams and rank them
+      const thirdPlaces = getThirdPlaceTeams();
+      const rankedTeamCodes = selectTopThirdPlaces(thirdPlaces);
+
+      // Get full data for ranked teams
+      const rankedTeamsData = rankedTeamCodes
+        .map(code => thirdPlaces.find(t => t.teamCode === code))
+        .filter((t): t is ThirdPlaceTeam => !!t);
+
+      // Build input array - index represents ranking (0 = best)
+      const input: ThirdPlaceInput[] = rankedTeamsData.map((team, index) => ({
+        index,
+        group: team.groupCode
+      }));
+
+      // Call API to get slot assignments
+      const response = await fetchService.thirds(input);
+
+      // Generate bracket with API response
+      generateBracket(response.data, rankedTeamsData);
+      setSelectedThirdPlaces(rankedTeamCodes);
+
+      setViewState('loading');
+      setTimeout(() => {
+        setActiveTab('brackets');
+        setViewState('idle');
+      }, 800);
+    } catch {
+      setBracketError(true);
       setActiveTab('brackets');
-      setViewState('idle');
-    }, 800);
+    } finally {
+      setIsGeneratingBracket(false);
+    }
   }, [resultsMode, isReadyForBrackets, getThirdPlaceTeams, generateBracket]);
 
-  const confirmThirdPlaces = useCallback(() => {
+  const confirmThirdPlaces = useCallback(async () => {
     if (selectedThirdPlaces.length !== 8) return;
-    setIsThirdPlacesModalOpen(false);
-    generateBracket(selectedThirdPlaces);
-    setViewState('loading');
-    setTimeout(() => {
+
+    setIsGeneratingBracket(true);
+    setBracketError(false);
+
+    try {
+      // Get full team data for all third-place teams
+      const allThirdPlaces = getThirdPlaceTeams();
+
+      // Filter to only selected teams and maintain selection order
+      const selectedTeamsData = selectedThirdPlaces
+        .map(code => allThirdPlaces.find(t => t.teamCode === code))
+        .filter((t): t is ThirdPlaceTeam => !!t);
+
+      // Build input array - index represents the order (0 = first selected = best)
+      const input: ThirdPlaceInput[] = selectedTeamsData.map((team, index) => ({
+        index,
+        group: team.groupCode
+      }));
+
+      // Call API to get slot assignments
+      const response = await fetchService.thirds(input);
+
+      // Generate bracket with API response
+      generateBracket(response.data, selectedTeamsData);
+
+      setIsThirdPlacesModalOpen(false);
+      setViewState('loading');
+      setTimeout(() => {
+        setActiveTab('brackets');
+        setViewState('idle');
+      }, 800);
+    } catch {
+      setBracketError(true);
+      setIsThirdPlacesModalOpen(false);
       setActiveTab('brackets');
-      setViewState('idle');
-    }, 800);
-  }, [selectedThirdPlaces, generateBracket]);
+    } finally {
+      setIsGeneratingBracket(false);
+    }
+  }, [selectedThirdPlaces, getThirdPlaceTeams, generateBracket]);
 
   const bracketChampion = useMemo(() => {
     const final = bracketMatches['5-1'];
     if (!final || !final.winner) return undefined;
     return final.teamA?.code === final.winner ? final.teamA : final.teamB;
   }, [bracketMatches]);
+
+  const resetBracketError = useCallback(() => {
+    setBracketError(false);
+  }, []);
 
   return {
     activeTab,
@@ -381,6 +448,8 @@ export const usePredictor = () => {
     scores,
     selectedThirdPlaces,
     isReadyForBrackets,
+    isGeneratingBracket,
+    bracketError,
     handleTeamClick,
     handleScoreChange,
     calculateStandings,
@@ -394,5 +463,6 @@ export const usePredictor = () => {
     updateBracketScore,
     resetBracket,
     resetAllPredictions,
+    resetBracketError,
   };
 };

@@ -141,7 +141,7 @@ export const HomePage = () => {
           <button
             type="button"
             className="px-8 py-3 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-xl transition-all duration-200 ease-out"
-            onClick={() => console.log('Simular clicked')}
+            onClick={() => navigate('/simulation')}
           >
             Simular
           </button>

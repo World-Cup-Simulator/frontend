@@ -1,5 +1,5 @@
 import type { adaptiveRequest, finalsResponse, finalsSimulationMatch, groupsResponse } from "../../features/simulation/models/simulationTypes";
-import type { finalsMatch, match } from "../models/matchTypes";
+import type { finalsMatch, match, thirdPlace, thirdPlaceSlot } from "../models/matchTypes";
 import type { groupCode, groupsDisplayResponse } from "../models/teamTypes";
 
 import { axiosService } from "./axiosService";
@@ -13,6 +13,11 @@ export const fetchService = {
     groupmatches: (groupCode: groupCode) => axiosService.get<match[]>(`/api/WorldCupMatches/group/${groupCode}`),
 
     finalsmatches: () => axiosService.get<finalsMatch[]>(`/api/WorldCupFinals`),
+
+    thirds: (thirds: thirdPlace[]) => 
+        axiosService.post<thirdPlaceSlot[]>(`/api/WorldCupMatches/third-places`,
+            thirds
+        ),
 
     simulategroups: (type: 0 | 1,) => 
         axiosService.get<groupsResponse>(`/api/Simulators/groups`, {
