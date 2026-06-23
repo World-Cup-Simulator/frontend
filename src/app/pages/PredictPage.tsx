@@ -18,6 +18,7 @@ export const PredictPage = () => {
     loading,
     error,
     clickOrders,
+    scores,
     selectedThirdPlaces,
     isReadyForBrackets,
     isGeneratingBracket,
@@ -145,6 +146,8 @@ export const PredictPage = () => {
                       onTeamClick={handleTeamClick}
                       onScoreChange={handleScoreChange}
                       calculateStandings={calculateStandings}
+                      scores={scores}
+                      hasBrackets={Object.keys(bracketMatches).length > 0}
                     />
                   ))}
                 </div>

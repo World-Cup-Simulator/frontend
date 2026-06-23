@@ -13,6 +13,9 @@ export interface HookMatch {
   teamA: { code: string; name: string; flagCode: string };
   teamB: { code: string; name: string; flagCode: string };
   date: string;
+  goalsA: number | null;
+  goalsB: number | null;
+  played: boolean;
 }
 
 export const mapTeamDisplayToHookTeam = (team: teamDisplay): { code: string; name: string; flagCode: string } => ({
@@ -39,6 +42,9 @@ export const mapApiMatchToHookFormat = (apiMatch: match): HookMatch => ({
     flagCode: getIsoCodeFromFifa(apiMatch.teamBCode),
   },
   date: apiMatch.date,
+  goalsA: apiMatch.goalsA,
+  goalsB: apiMatch.goalsB,
+  played: apiMatch.played,
 });
 
 export const mapMatchToTeamStanding = (apiMatch: match, teamCode: string): TeamStanding => {
