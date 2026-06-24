@@ -16,13 +16,13 @@ export const convertMatchId = (stage: number, key: number): string => {
 
 /**
  * Map API group result to SimulatedMatch
- * API winner codes: 0 = draw, 1 = TeamA wins, 2 = TeamB wins
+ * API winner codes: 0 = TeamA wins, 1 = draw, 2 = TeamB wins
  */
 export const mapGroupResultToSimulatedMatch = (apiMatch: groupResult): SimulatedMatch => {
   // Determine winner based on API winner field (not goals)
   // This is important for "Sin Resultados" mode where goals are 0-0
   let winner: 'A' | 'B' | 'draw';
-  if (apiMatch.winner === 1) {
+  if (apiMatch.winner === 0) {
     winner = 'A';
   } else if (apiMatch.winner === 2) {
     winner = 'B';
@@ -115,6 +115,69 @@ export const mapGroupsResponseToSimulatedGroups = (
       groupCode,
       standings,
       matches,
+    };
+  });
+};
+
+/**
+ * Convert HookMatch (played) to SimulatedMatch format
+ */
+export const mapPlayedMatchToSimulatedMatch = (
+  playedMatch: {
+    matchId: number;
+    teamA: { name: string };
+    teamB: { name: string };
+    goalsA: number | null;
+    goalsB: number | null;
+    date: string;
+  },
+  groupCode: string
+): SimulatedMatch => {
+  const goalsA = playedMatch.goalsA ?? 0;
+  const goalsB = playedMatch.goalsB ?? 0;
+  
+  let winner: 'A' | 'B' | 'draw';
+  if (goalsA > goalsB) {
+    winner = 'A';
+  } else if (goalsB > goalsA) {
+    winner = 'B';
+  } else {
+    winner = 'draw';
+  }
+
+  return {
+    matchId: String(playedMatch.matchId),
+    groupCode,
+    teamA: playedMatch.teamA.name,
+    teamB: playedMatch.teamB.name,
+    goalsA,
+    goalsB,
+    winner,
+    date: playedMatch.date,
+    outcomeProbability: 0,
+    scoreProbability: 0,
+    decidedByPenalties: false,
+    played: true,
+  };
+};
+
+/**
+ * Merge played matches with simulated groups
+ */
+export const mergePlayedMatchesWithSimulatedGroups = (
+  simulatedGroups: SimulatedGroup[],
+  playedMatches: Record<string, { matchId: number; teamA: { name: string }; teamB: { name: string }; goalsA: number | null; goalsB: number | null; date: string }[]>
+): SimulatedGroup[] => {
+  return simulatedGroups.map((group) => {
+    const groupPlayedMatches = playedMatches[group.groupCode] || [];
+    const playedAsSimulated = groupPlayedMatches.map((match) =>
+      mapPlayedMatchToSimulatedMatch(match, group.groupCode)
+    );
+
+    // Merge: played matches first, then simulated (API doesn't return played matches)
+    return {
+      ...group,
+      matches: [...playedAsSimulated, ...group.matches],
     };
   });
 };

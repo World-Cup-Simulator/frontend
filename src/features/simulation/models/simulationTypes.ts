@@ -12,6 +12,7 @@ export interface SimulatedMatch {
   decidedByPenalties: boolean;
   teamAWinProbability?: number;
   teamBWinProbability?: number;
+  played?: boolean;
 }
 
 export interface SimulatedGroupStanding {

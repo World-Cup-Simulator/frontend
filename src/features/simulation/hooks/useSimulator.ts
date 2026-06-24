@@ -11,7 +11,7 @@ import type {
   finalsResponse,
   adaptiveRequest 
 } from '../models';
-import { mapGroupsResponseToSimulatedGroups, mapFinalsResponseToSimulatedBracket, initializeTeamNameLookup } from '../utils/simulationMapper';
+import { mapGroupsResponseToSimulatedGroups, mapFinalsResponseToSimulatedBracket, initializeTeamNameLookup, mergePlayedMatchesWithSimulatedGroups } from '../utils/simulationMapper';
 import type { groupCode } from '../../../shared/models/teamTypes';
 import type { match } from '../../../shared/models/matchTypes';
 import { getIsoCodeFromFifa } from '../../../shared/utils/flagMapper';
@@ -30,7 +30,81 @@ export interface HookMatch {
   teamA: { code: string; name: string; flagCode: string };
   teamB: { code: string; name: string; flagCode: string };
   date: string;
+  goalsA: number | null;
+  goalsB: number | null;
+  played: boolean;
 }
+
+interface TeamStanding {
+  teamCode: string;
+  teamName: string;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  gf: number;
+  gc: number;
+  dg: number;
+  points: number;
+}
+
+const createEmptyStandings = (teams: { code: string; name: string; flagCode: string }[]): TeamStanding[] => {
+  return teams.map((team) => ({
+    teamCode: team.code,
+    teamName: team.name,
+    played: 0,
+    won: 0,
+    drawn: 0,
+    lost: 0,
+    gf: 0,
+    gc: 0,
+    dg: 0,
+    points: 0,
+  }));
+};
+
+const applyMatchResult = (
+  standings: TeamStanding[],
+  match: { teamA: { code: string }; teamB: { code: string } },
+  score: { goalsA: number; goalsB: number }
+) => {
+  const teamA = standings.find((s) => s.teamCode === match.teamA.code);
+  const teamB = standings.find((s) => s.teamCode === match.teamB.code);
+
+  if (!teamA || !teamB) return;
+
+  teamA.played += 1;
+  teamB.played += 1;
+  teamA.gf += score.goalsA;
+  teamA.gc += score.goalsB;
+  teamB.gf += score.goalsB;
+  teamB.gc += score.goalsA;
+  teamA.dg = teamA.gf - teamA.gc;
+  teamB.dg = teamB.gf - teamB.gc;
+
+  if (score.goalsA > score.goalsB) {
+    teamA.won += 1;
+    teamB.lost += 1;
+    teamA.points += 3;
+  } else if (score.goalsB > score.goalsA) {
+    teamB.won += 1;
+    teamA.lost += 1;
+    teamB.points += 3;
+  } else {
+    teamA.drawn += 1;
+    teamB.drawn += 1;
+    teamA.points += 1;
+    teamB.points += 1;
+  }
+};
+
+const sortStandings = (standings: TeamStanding[]): TeamStanding[] => {
+  return [...standings].sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    if (b.dg !== a.dg) return b.dg - a.dg;
+    return b.gf - a.gf;
+  });
+};
 
 export const useSimulator = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('groups');
@@ -44,6 +118,8 @@ export const useSimulator = () => {
   // Data states
   const [groupsData, setGroupsData] = useState<HookGroupData[]>([]);
   const [matchesData, setMatchesData] = useState<Record<string, HookMatch[]>>({});
+  const [playedMatches, setPlayedMatches] = useState<Record<string, HookMatch[]>>({});
+  const [initialStandings, setInitialStandings] = useState<Record<string, TeamStanding[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
@@ -76,9 +152,12 @@ export const useSimulator = () => {
         
         // Fetch matches for each group
         const matchesMap: Record<string, HookMatch[]> = {};
+        const playedMap: Record<string, HookMatch[]> = {};
+        const standingsMap: Record<string, TeamStanding[]> = {};
+
         for (const group of mappedGroups) {
           const matchesResponse = await fetchService.groupmatches(group.groupCode as groupCode);
-          matchesMap[group.groupCode] = matchesResponse.data.map((match: match) => ({
+          const mappedMatches = matchesResponse.data.map((match: match) => ({
             matchId: match.matchId,
             teamA: {
               code: match.teamACode,
@@ -91,9 +170,27 @@ export const useSimulator = () => {
               flagCode: getIsoCodeFromFifa(match.teamBCode),
             },
             date: match.date,
+            goalsA: match.goalsA,
+            goalsB: match.goalsB,
+            played: match.played,
           }));
+          matchesMap[group.groupCode] = mappedMatches;
+
+          // Separate played matches
+          playedMap[group.groupCode] = mappedMatches.filter((m) => m.played);
+
+          // Calculate initial standings from played matches
+          const standings = createEmptyStandings(group.teams);
+          mappedMatches.forEach((m) => {
+            if (m.played && m.goalsA !== null && m.goalsB !== null) {
+              applyMatchResult(standings, m, { goalsA: m.goalsA, goalsB: m.goalsB });
+            }
+          });
+          standingsMap[group.groupCode] = sortStandings(standings);
         }
         setMatchesData(matchesMap);
+        setPlayedMatches(playedMap);
+        setInitialStandings(standingsMap);
       } catch {
         setError(true);
       } finally {
@@ -111,6 +208,7 @@ export const useSimulator = () => {
     setKnockoutBracket([]);
     setRatingData([]);
     setError(false);
+    // Don't clear playedMatches or initialStandings - they persist
   }, []);
 
   const handleResultsModeChange = useCallback((mode: ResultsMode) => {
@@ -149,7 +247,10 @@ export const useSimulator = () => {
       
       // Map response to SimulatedGroup format
       const simulatedGroups = mapGroupsResponseToSimulatedGroups(response.data);
-      setGroupData(simulatedGroups);
+      
+      // Merge with played matches
+      const mergedGroups = mergePlayedMatchesWithSimulatedGroups(simulatedGroups, playedMatches);
+      setGroupData(mergedGroups);
       setPhase('groups-simulated');
     } catch {
       setError(true);
@@ -158,7 +259,7 @@ export const useSimulator = () => {
       setIsSimulating(false);
       setViewState('idle');
     }
-  }, [resultsMode, resetToIdle]);
+  }, [resultsMode, resetToIdle, playedMatches]);
 
   /** Simulate knockouts phase using API with sequential calls */
   const simulateBrackets = useCallback(async () => {
@@ -252,6 +353,7 @@ export const useSimulator = () => {
     setRatingData([]);
     setActiveTab('groups');
     setError(false);
+    // Don't clear playedMatches or initialStandings - they persist for re-simulation
   }, []);
 
   const handleSimulate = useCallback(async () => {
@@ -292,6 +394,8 @@ export const useSimulator = () => {
     buttonLabel,
     groupsData,
     matchesData,
+    playedMatches,
+    initialStandings,
     loading,
     error,
     isSimulating,
