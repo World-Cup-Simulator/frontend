@@ -18,10 +18,18 @@ const getWinner = (match: SimulatedMatch): string | null => {
 export const MatchCard = ({ match, getTeamInfo, hasSimulation, resultsMode }: MatchCardProps) => {
   const teamA = getTeamInfo(match.teamA);
   const teamB = getTeamInfo(match.teamB);
-  const winner = hasSimulation ? getWinner(match) : null;
 
-  const teamAClass = hasSimulation && winner === match.teamA ? 'text-emerald-300' : 'text-zinc-300';
-  const teamBClass = hasSimulation && winner === match.teamB ? 'text-emerald-300' : 'text-zinc-300';
+  // Check if this is a played match (real result) or simulated
+  const isPlayed = match.played === true;
+
+  // Determine winner for highlighting
+  const winner = isPlayed || hasSimulation ? getWinner(match) : null;
+
+  const teamAClass = winner === match.teamA ? 'text-emerald-400 font-semibold' : 'text-zinc-300';
+  const teamBClass = winner === match.teamB ? 'text-emerald-400 font-semibold' : 'text-zinc-300';
+
+  // Show scores for played matches (always) or simulated matches (in with-results mode)
+  const showScore = isPlayed || (hasSimulation && resultsMode === 'with-results');
 
   return (
     <div className="bg-zinc-800 rounded-lg border border-zinc-700/50 overflow-hidden">
@@ -35,14 +43,14 @@ export const MatchCard = ({ match, getTeamInfo, hasSimulation, resultsMode }: Ma
           </span>
         </div>
 
-        {/* Center: Score or VS */}
+        {/* Center: Score or Dash for non-played */}
         <div className="flex items-center gap-2 px-2 shrink-0">
-          {hasSimulation && resultsMode === 'with-results' ? (
+          {showScore ? (
             <span className="text-sm font-bold text-zinc-100">
               {match.goalsA} - {match.goalsB}
             </span>
           ) : (
-            <span className="text-xs text-zinc-500 font-medium">vs</span>
+            <span className="text-xs text-zinc-500 font-medium">-</span>
           )}
         </div>
 
@@ -55,8 +63,8 @@ export const MatchCard = ({ match, getTeamInfo, hasSimulation, resultsMode }: Ma
         </div>
       </div>
 
-      {/* Sub-row: probabilities (only when simulated) */}
-      {hasSimulation && (
+      {/* Sub-row: probabilities (only when simulated, NOT for played matches) */}
+      {hasSimulation && !isPlayed && (
         <div className="px-3 py-1.5 bg-zinc-900/50 border-t border-zinc-700/50 flex items-center justify-between">
           <span className="text-[10px] text-zinc-400">
             Resultado: {match.outcomeProbability ? (match.outcomeProbability * 100).toFixed(2) : 0}%

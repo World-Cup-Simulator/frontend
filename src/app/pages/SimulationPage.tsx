@@ -18,6 +18,8 @@ export const SimulationPage = () => {
     handleSimulate,
     buttonLabel,
     groupsData,
+    matchesData,
+    initialStandings,
     loading,
     error,
     isSimulating,
@@ -169,6 +171,8 @@ export const SimulationPage = () => {
                       group={group}
                       simulatedGroup={simulatedGroup}
                       resultsMode={resultsMode}
+                      allMatches={matchesData[group.groupCode]}
+                      initialStandings={initialStandings[group.groupCode]}
                     />
                   );
                 })}

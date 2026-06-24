@@ -37,6 +37,7 @@ export const usePredictor = () => {
   const [matchesData, setMatchesData] = useState<Record<string, HookMatch[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [scores, setScores] = useState<Record<number, ScoreEntry>>({});
 
   // Fetch groups and matches on mount
   useEffect(() => {
@@ -52,11 +53,26 @@ export const usePredictor = () => {
 
         // Then fetch matches for each group
         const matchesMap: Record<string, HookMatch[]> = {};
+        const initialScores: Record<number, ScoreEntry> = {};
+
         for (const group of mappedGroups) {
           const matchesResponse = await fetchService.groupmatches(group.groupCode as groupCode);
-          matchesMap[group.groupCode] = matchesResponse.data.map((match: match) => mapApiMatchToHookFormat(match));
+          const mappedMatches = matchesResponse.data.map((match: match) => mapApiMatchToHookFormat(match));
+          matchesMap[group.groupCode] = mappedMatches;
+
+          // Initialize scores from played matches
+          mappedMatches.forEach((m) => {
+            if (m.played && m.goalsA !== null && m.goalsB !== null) {
+              initialScores[m.matchId] = {
+                matchId: m.matchId,
+                goalsA: m.goalsA,
+                goalsB: m.goalsB,
+              };
+            }
+          });
         }
         setMatchesData(matchesMap);
+        setScores(initialScores);
       } catch {
         setError(true);
       } finally {
@@ -77,8 +93,6 @@ export const usePredictor = () => {
       setClickOrders(createInitialClickOrders(groupsData));
     }
   }, [groupsData]);
-
-  const [scores, setScores] = useState<Record<number, ScoreEntry>>({});
 
   const [selectedThirdPlaces, setSelectedThirdPlaces] = useState<string[]>([]);
 
@@ -124,7 +138,13 @@ export const usePredictor = () => {
     const matches = matchesData[group.groupCode] || [];
 
     matches.forEach((m) => {
-      const score = scores[m.matchId];
+      // Use scores state if available, otherwise use match's own goals if played
+      const score = scores[m.matchId] ?? (m.played ? {
+        matchId: m.matchId,
+        goalsA: m.goalsA ?? 0,
+        goalsB: m.goalsB ?? 0,
+      } : null);
+
       if (!score) return;
       applyMatchResult(standings, m, score);
     });
@@ -138,7 +158,14 @@ export const usePredictor = () => {
       return groupsData.every((g) => (clickOrders[g.groupCode] || []).length === 4);
     }
     const totalMatches = Object.values(matchesData).reduce((sum, matches) => sum + matches.length, 0);
-    return Object.keys(scores).length === totalMatches;
+
+    // Count matches with scores from either user input or played API matches
+    const scoredMatchIds = new Set([
+      ...Object.keys(scores).map(Number),
+      ...Object.values(matchesData).flat().filter(m => m.played).map(m => m.matchId),
+    ]);
+
+    return scoredMatchIds.size === totalMatches;
   }, [resultsMode, groupsData, clickOrders, scores, matchesData]);
 
   /** Gather the third-place team from every group, ready for bracket generation. */

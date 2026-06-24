@@ -8,7 +8,8 @@ export interface match {
     teamACode: string,
     teamBCode: string,
     goalsA: number | null,
-    goalsB: number | null
+    goalsB: number | null,
+    played: boolean
 }
 
 export interface finalsMatch {

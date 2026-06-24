@@ -6,6 +6,12 @@ import type { HookMatch } from '../utils/predictionMapper';
 
 type ResultsMode = 'with-results' | 'no-results';
 
+interface ScoreEntry {
+  matchId: number;
+  goalsA: number;
+  goalsB: number;
+}
+
 interface GroupPredictorProps {
   group: { groupCode: string; teams: { code: string; name: string; flagCode: string }[] };
   groupIndex: number;
@@ -15,6 +21,8 @@ interface GroupPredictorProps {
   onTeamClick: (groupCode: string, teamCode: string) => void;
   onScoreChange: (matchId: number, goalsA: number, goalsB: number) => void;
   calculateStandings: (groupIndex: number) => TeamStanding[];
+  scores: Record<number, ScoreEntry>;
+  hasBrackets: boolean;
 }
 
 export const GroupPredictor = ({
@@ -26,8 +34,33 @@ export const GroupPredictor = ({
   onTeamClick,
   onScoreChange,
   calculateStandings,
+  scores,
+  hasBrackets,
 }: GroupPredictorProps) => {
-  const [inputValues, setInputValues] = useState<Record<number, { goalsA: string; goalsB: string }>>({});
+  const [inputValues, setInputValues] = useState<Record<number, { goalsA: string; goalsB: string }>>(() => {
+    // Initialize input values from played matches and user-entered scores
+    const initialValues: Record<number, { goalsA: string; goalsB: string }> = {};
+
+    // From played matches (API)
+    matches.forEach((match) => {
+      if (match.played && match.goalsA !== null && match.goalsB !== null) {
+        initialValues[match.matchId] = {
+          goalsA: match.goalsA.toString(),
+          goalsB: match.goalsB.toString(),
+        };
+      }
+    });
+
+    // From user-entered scores
+    Object.entries(scores).forEach(([matchId, score]) => {
+      initialValues[Number(matchId)] = {
+        goalsA: score.goalsA.toString(),
+        goalsB: score.goalsB.toString(),
+      };
+    });
+
+    return initialValues;
+  });
 
   /** Update a single score input and notify parent when both sides are filled. */
   const handleInputChange = useCallback((matchId: number, field: 'goalsA' | 'goalsB', rawValue: string) => {
@@ -141,6 +174,16 @@ export const GroupPredictor = ({
           <div className="flex flex-col gap-2">
             {matches.map((match) => {
               const values = inputValues[match.matchId] || { goalsA: '', goalsB: '' };
+              const isLocked = match.played || hasBrackets;  // Lock API-played matches or when brackets generated
+
+              // Get display values for locked matches
+              const displayGoalsA = isLocked
+                ? (match.goalsA ?? scores[match.matchId]?.goalsA ?? 0).toString()
+                : values.goalsA;
+              const displayGoalsB = isLocked
+                ? (match.goalsB ?? scores[match.matchId]?.goalsB ?? 0).toString()
+                : values.goalsB;
+
               return (
                 <div
                   key={match.matchId}
@@ -148,29 +191,45 @@ export const GroupPredictor = ({
                 >
                   <FlagImage code={match.teamA.code} alt={match.teamA.name} className="h-4 w-6 shrink-0" />
 
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    placeholder="0"
-                    value={values.goalsA}
-                    onChange={(e) => handleInputChange(match.matchId, 'goalsA', e.target.value)}
-                    onFocus={(e) => e.target.select()}
-                    className="w-10 h-7 bg-zinc-900 border border-zinc-700 rounded text-center text-sm font-bold text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
+                  {isLocked ? (
+                    // Show plain text for played or scored matches
+                    <>
+                      <span className="w-10 h-7 flex items-center justify-center text-sm font-bold text-zinc-100">
+                        {displayGoalsA || '0'}
+                      </span>
+                      <span className="text-xs text-zinc-500 font-medium">-</span>
+                      <span className="w-10 h-7 flex items-center justify-center text-sm font-bold text-zinc-100">
+                        {displayGoalsB || '0'}
+                      </span>
+                    </>
+                  ) : (
+                    // Show inputs for unplayed matches without scores
+                    <>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        placeholder="0"
+                        value={values.goalsA}
+                        onChange={(e) => handleInputChange(match.matchId, 'goalsA', e.target.value)}
+                        onFocus={(e) => e.target.select()}
+                        className="w-10 h-7 bg-zinc-900 border border-zinc-700 rounded text-center text-sm font-bold text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
 
-                  <span className="text-xs text-zinc-500 font-medium">-</span>
+                      <span className="text-xs text-zinc-500 font-medium">-</span>
 
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    placeholder="0"
-                    value={values.goalsB}
-                    onChange={(e) => handleInputChange(match.matchId, 'goalsB', e.target.value)}
-                    onFocus={(e) => e.target.select()}
-                    className="w-10 h-7 bg-zinc-900 border border-zinc-700 rounded text-center text-sm font-bold text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        placeholder="0"
+                        value={values.goalsB}
+                        onChange={(e) => handleInputChange(match.matchId, 'goalsB', e.target.value)}
+                        onFocus={(e) => e.target.select()}
+                        className="w-10 h-7 bg-zinc-900 border border-zinc-700 rounded text-center text-sm font-bold text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                    </>
+                  )}
 
                   <FlagImage code={match.teamB.code} alt={match.teamB.name} className="h-4 w-6 shrink-0" />
                 </div>
