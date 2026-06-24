@@ -1,1 +1,1 @@
-export type { MatchTick, TickerTapeProps, TickerItemProps } from './tickerTypes';
+export type { MatchTick, TickerTapeProps, Team, TickerItemProps } from './tickerTypes';

@@ -13,14 +13,6 @@ const TrophyIcon = () => (
   />
 );
 
-const SmallTrophyIcon = () => (
-  <img
-    src="/favicon.svg"
-    alt=""
-    className="h-4 w-4"
-  />
-);
-
 const PredictionsIcon = () => (
   <svg
     className="h-4 w-4 text-zinc-400"
