@@ -6,34 +6,38 @@ interface BaseLayoutProps {
 }
 
 const TrophyIcon = () => (
-  <svg
-    className="h-6 w-6 text-zinc-200"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    strokeWidth={1.5}
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6m12 5h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16m-2-8.34V17c0 .55-.47.98-.97 1.21C15.15 18.75 14 20.24 14 22M8 13.66V17c0 .55.47.98.97 1.21C10.15 18.75 12 20.24 12 22M18 2H6v7a6 6 0 0 0 12 0V2Z"
-    />
-  </svg>
+  <img
+    src="/favicon.svg"
+    alt="World Cup Simulator"
+    className="h-6 w-6"
+  />
 );
 
 const SmallTrophyIcon = () => (
+  <img
+    src="/favicon.svg"
+    alt=""
+    className="h-4 w-4"
+  />
+);
+
+const PredictionsIcon = () => (
   <svg
     className="h-4 w-4 text-zinc-400"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    strokeWidth={1.5}
+    fill="currentColor"
+    viewBox="0 0 16 16"
   >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6m12 5h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16m-2-8.34V17c0 .55-.47.98-.97 1.21C15.15 18.75 14 20.24 14 22M8 13.66V17c0 .55.47.98.97 1.21C10.15 18.75 12 20.24 12 22M18 2H6v7a6 6 0 0 0 12 0V2Z"
-    />
+    <path d="M3 0a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V3a3 3 0 0 0-3-3zm1 5.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3m8 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3m1.5 6.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0M12 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3M5.5 12a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0M4 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3" />
+  </svg>
+);
+
+const SimulationsIcon = () => (
+  <svg
+    className="h-4 w-4 text-zinc-400"
+    fill="currentColor"
+    viewBox="0 0 16 16"
+  >
+    <path fillRule="evenodd" d="M6 3.5A1.5 1.5 0 0 1 7.5 2h1A1.5 1.5 0 0 1 10 3.5v1A1.5 1.5 0 0 1 8.5 6v1H11a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-1 0V8h-5v.5a.5.5 0 0 1-1 0v-1A.5.5 0 0 1 5 7h2.5V6A1.5 1.5 0 0 1 6 4.5zm-3 8A1.5 1.5 0 0 1 4.5 10h1A1.5 1.5 0 0 1 7 11.5v1A1.5 1.5 0 0 1 5.5 14h-1A1.5 1.5 0 0 1 3 12.5zm6 0a1.5 1.5 0 0 1 1.5-1.5h1a1.5 1.5 0 0 1 1.5 1.5v1a1.5 1.5 0 0 1-1.5 1.5h-1A1.5 1.5 0 0 1 9 12.5z" />
   </svg>
 );
 
@@ -98,7 +102,7 @@ export const BaseLayout = ({ children }: BaseLayoutProps) => {
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-zinc-200 hover:bg-zinc-800/50 transition-colors duration-200"
                 onClick={() => handleOptionClick('/predict')}
               >
-                <SmallTrophyIcon />
+                <PredictionsIcon />
                 Predicciones
               </button>
               <button
@@ -106,7 +110,7 @@ export const BaseLayout = ({ children }: BaseLayoutProps) => {
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-zinc-200 hover:bg-zinc-800/50 transition-colors duration-200"
                 onClick={() => handleOptionClick('/simulation')}
               >
-                <SmallTrophyIcon />
+                <SimulationsIcon />
                 Simulaciones
               </button>
             </div>

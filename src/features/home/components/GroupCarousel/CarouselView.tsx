@@ -7,9 +7,10 @@ interface CarouselViewProps {
   matches: MatchSummary[];
   activeIndex: number;
   onNavigate: (index: number) => void;
+  onToggleView?: () => void;
 }
 
-export const CarouselView = ({ groups, matches, activeIndex, onNavigate }: CarouselViewProps) => {
+export const CarouselView = ({ groups, matches, activeIndex, onNavigate, onToggleView }: CarouselViewProps) => {
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
 
@@ -82,6 +83,8 @@ export const CarouselView = ({ groups, matches, activeIndex, onNavigate }: Carou
         const offset = offsetIndex - 2;
         const group = groups[groupIndex];
 
+        const isCenterCard = offset === 0;
+
         return (
           <div
             key={`${group.groupCode}-${groupIndex}`}
@@ -90,14 +93,29 @@ export const CarouselView = ({ groups, matches, activeIndex, onNavigate }: Carou
               if (offset === -1) onNavigate((activeIndex - 1 + groups.length) % groups.length);
               if (offset === 1) onNavigate((activeIndex + 1) % groups.length);
             }}
-            onTouchStart={offset === 0 ? handleTouchStart : undefined}
-            onTouchMove={offset === 0 ? handleTouchMove : undefined}
-            onTouchEnd={offset === 0 ? handleTouchEnd : undefined}
+            onTouchStart={isCenterCard ? handleTouchStart : undefined}
+            onTouchMove={isCenterCard ? handleTouchMove : undefined}
+            onTouchEnd={isCenterCard ? handleTouchEnd : undefined}
             role="button"
-            tabIndex={offset === 0 ? 0 : -1}
-            aria-label={offset === 0 ? `Grupo ${group.groupCode} activo` : `Ver grupo ${group.groupCode}`}
+            tabIndex={isCenterCard ? 0 : -1}
+            aria-label={isCenterCard ? `Grupo ${group.groupCode} activo` : `Ver grupo ${group.groupCode}`}
           >
-            <GroupCard group={group} matches={matches} variant="carousel" isActive={offset === 0} />
+            {isCenterCard && onToggleView && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleView();
+                }}
+                className="absolute top-2 right-2 z-40 flex min-[700px]:hidden items-center justify-center w-6 h-6 text-zinc-400 hover:text-zinc-200 transition-colors duration-200"
+                aria-label="Ver Grilla"
+              >
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                  <path fillRule="evenodd" d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707m4.344-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707" />
+                </svg>
+              </button>
+            )}
+            <GroupCard group={group} matches={matches} variant="carousel" isActive={isCenterCard} />
           </div>
         );
       })}

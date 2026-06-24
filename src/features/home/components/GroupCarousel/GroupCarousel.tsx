@@ -8,12 +8,14 @@ interface GroupCarouselProps {
   groups: GroupData[];
   matches: MatchSummary[];
   currentView: 'carousel' | 'expanded';
+  onToggleView?: () => void;
 }
 
 export const GroupCarousel = ({
   groups,
   matches,
   currentView,
+  onToggleView,
 }: GroupCarouselProps) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [displayView, setDisplayView] = useState(currentView);
@@ -97,11 +99,12 @@ export const GroupCarousel = ({
           matches={matches}
           activeIndex={activeIndex}
           onNavigate={handleNavigate}
+          onToggleView={onToggleView}
         />
       )}
 
       {displayView === 'expanded' && (
-        <ExpandedView groups={groups} matches={matches} />
+        <ExpandedView groups={groups} matches={matches} onToggleView={onToggleView} />
       )}
     </div>
   );

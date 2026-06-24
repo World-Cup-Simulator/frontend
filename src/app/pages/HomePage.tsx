@@ -102,8 +102,7 @@ export const HomePage = () => {
             Simulador Mundial 2026
           </h1>
           <p className="text-sm md:text-base text-zinc-400 max-w-2xl">
-            Predice resultados, simula escenarios y descubre quién podría
-            levantar la copa en el Mundial 2026.
+            Predice resultados, explora escenarios y descubre qué selección levantará la Copa del Mundo 2026.
           </p>
         </section>
 
@@ -126,6 +125,7 @@ export const HomePage = () => {
               groups={groups}
               matches={matchSummaries}
               currentView={view}
+              onToggleView={() => setView(view === 'carousel' ? 'expanded' : 'carousel')}
             />
           )}
         </section>
@@ -150,7 +150,7 @@ export const HomePage = () => {
 
       <button
         type="button"
-        className="fixed bottom-8 right-8 z-50 px-6 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-medium rounded-xl border border-zinc-700/50 transition-all duration-200 ease-out shadow-lg"
+        className="hidden min-[700px]:block fixed bottom-8 right-8 z-50 px-6 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-medium rounded-xl border border-zinc-700/50 transition-all duration-200 ease-out shadow-lg"
         onClick={() => setView(view === 'carousel' ? 'expanded' : 'carousel')}
       >
         {view === 'carousel' ? 'Ver Grilla' : 'Ver Carrusel'}

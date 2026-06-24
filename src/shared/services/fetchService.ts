@@ -9,7 +9,6 @@ export const fetchService = {
 
     matches: () => axiosService.get<match[]>(`/api/WorldCupMatches`),
 
-    //Unused
     groupmatches: (groupCode: groupCode) => axiosService.get<match[]>(`/api/WorldCupMatches/group/${groupCode}`),
 
     finalsmatches: () => axiosService.get<finalsMatch[]>(`/api/WorldCupFinals`),
