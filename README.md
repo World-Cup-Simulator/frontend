@@ -152,19 +152,19 @@ src/
 
 Live match ticker and interactive groups carousel.
 
-*[Screenshot placeholder - Homepage with ticker and groups view]*
+![Home Page](./docs/images/homepage.png)
 
 ### 🎯 Prediction Interface
 
 Manual match entry with bracket builder.
 
-*[Screenshot placeholder - Prediction page with group standings and bracket]*
+![Predict Page](./docs/images/predictpage.png)
 
 ### 🎲 Simulation Results
 
 Automatic tournament simulation with full bracket view.
 
-*[Screenshot placeholder - Simulation results showing knockout bracket]*
+![Simulation Page](./docs/images/simulationpage.png)
 
 ---
 
