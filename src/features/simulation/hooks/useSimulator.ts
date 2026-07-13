@@ -1,19 +1,20 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { fetchService } from '../../../shared/services/fetchService';
 import type { groupsDisplayResponse } from '../../../shared/models/teamTypes';
-import type { 
-  SimulatedGroup, 
-  SimulatedBracket, 
-  SimulationPhase, 
+import type {
+  SimulatedGroup,
+  SimulatedBracket,
+  SimulatedMatch,
+  SimulationPhase,
   SimulationMode,
   finalsSimulationMatch,
   previousResult,
   finalsResponse,
-  adaptiveRequest 
+  adaptiveRequest
 } from '../models';
 import { mapGroupsResponseToSimulatedGroups, mapFinalsResponseToSimulatedBracket, initializeTeamNameLookup, mergePlayedMatchesWithSimulatedGroups } from '../utils/simulationMapper';
 import type { groupCode } from '../../../shared/models/teamTypes';
-import type { match } from '../../../shared/models/matchTypes';
+import type { match, finalsMatch } from '../../../shared/models/matchTypes';
 import { getIsoCodeFromFifa } from '../../../shared/utils/flagMapper';
 
 type ActiveTab = 'groups' | 'brackets';
@@ -238,20 +239,38 @@ export const useSimulator = () => {
     setError(false);
 
     try {
-      const type = resultsMode === 'with-results' ? 1 : 0;
-      const response = await fetchService.simulategroups(type);
-      
-      // Store knockout bracket and rating data for later use
-      setKnockoutBracket(response.data.knockoutBracket);
-      setRatingData(response.data.ratingData);
-      
-      // Map response to SimulatedGroup format
-      const simulatedGroups = mapGroupsResponseToSimulatedGroups(response.data);
-      
-      // Merge with played matches
-      const mergedGroups = mergePlayedMatchesWithSimulatedGroups(simulatedGroups, playedMatches);
-      setGroupData(mergedGroups);
-      setPhase('groups-simulated');
+      // Check if all group matches are played (72 total = 12 groups x 6 matches)
+      const totalPlayedMatches = Object.values(playedMatches).reduce(
+        (sum, matches) => sum + matches.length,
+        0
+      );
+
+      if (totalPlayedMatches === 72) {
+        // All matches played - use real finals data
+        const finalsResponse = await fetchService.finalsforsimulation();
+        setKnockoutBracket(finalsResponse.data);
+        setRatingData([]);
+
+        // Create empty group data since all matches are real
+        setGroupData([]);
+        setPhase('groups-simulated');
+      } else {
+        // Normal simulation flow
+        const type = resultsMode === 'with-results' ? 1 : 0;
+        const response = await fetchService.simulategroups(type);
+
+        // Store knockout bracket and rating data for later use
+        setKnockoutBracket(response.data.knockoutBracket);
+        setRatingData(response.data.ratingData);
+
+        // Map response to SimulatedGroup format
+        const simulatedGroups = mapGroupsResponseToSimulatedGroups(response.data);
+
+        // Merge with played matches
+        const mergedGroups = mergePlayedMatchesWithSimulatedGroups(simulatedGroups, playedMatches);
+        setGroupData(mergedGroups);
+        setPhase('groups-simulated');
+      }
     } catch {
       setError(true);
       resetToIdle();
@@ -261,6 +280,61 @@ export const useSimulator = () => {
     }
   }, [resultsMode, resetToIdle, playedMatches]);
 
+  /**
+   * Convert finalsMatch (real data) to SimulatedMatch format
+   */
+  const mapRealFinalsMatchToSimulated = (realMatch: finalsMatch): SimulatedMatch => {
+    // Determine winner based on goals
+    let winner: 'A' | 'B' | 'draw';
+    if (realMatch.goalsA === null || realMatch.goalsB === null) {
+      winner = 'draw'; // Not played yet
+    } else if (realMatch.goalsA > realMatch.goalsB) {
+      winner = 'A';
+    } else if (realMatch.goalsB > realMatch.goalsA) {
+      winner = 'B';
+    } else {
+      winner = 'draw';
+    }
+
+    return {
+      matchId: `${realMatch.stage}-${realMatch.key}`,
+      teamA: realMatch.teamAName,
+      teamB: realMatch.teamBName,
+      goalsA: realMatch.goalsA ?? 0,
+      goalsB: realMatch.goalsB ?? 0,
+      winner,
+      date: realMatch.date instanceof Date ? realMatch.date.toISOString().split('T')[0] : String(realMatch.date),
+      outcomeProbability: 1, // Real match has 100% probability
+      scoreProbability: 1,
+      decidedByPenalties: false,
+      played: realMatch.goalsA !== null && realMatch.goalsB !== null,
+    };
+  };
+
+  /**
+   * Combine real finals data with simulated results
+   * Real data takes precedence for played matches
+   */
+  const combineRealAndSimulatedData = (
+    realMatches: finalsMatch[],
+    simulatedMatches: Record<string, SimulatedMatch>,
+  ): Record<string, SimulatedMatch> => {
+    const combined = { ...simulatedMatches };
+
+    realMatches.forEach((realMatch) => {
+      const matchId = `${realMatch.stage}-${realMatch.key}`;
+
+      // If real match has results (goals not null), use real data
+      if (realMatch.goalsA !== null && realMatch.goalsB !== null) {
+        combined[matchId] = mapRealFinalsMatchToSimulated(realMatch);
+      }
+      // If real match doesn't have results but we have simulated data, keep simulated
+      // (simulated data already has the probabilities)
+    });
+
+    return combined;
+  };
+
   /** Simulate knockouts phase using API with sequential calls */
   const simulateBrackets = useCallback(async () => {
     setIsSimulating(true);
@@ -269,30 +343,49 @@ export const useSimulator = () => {
 
     try {
       const type = resultsMode === 'with-results' ? 1 : 0;
-      let allMatches: Record<string, import('../models').SimulatedMatch> = {};
+      let allMatches: Record<string, SimulatedMatch> = {};
       let currentStage = 1;
-      
+
+      // Fetch real finals data to combine with simulations
+      const realFinalsResponse = await fetchService.finalsmatches();
+      const realMatches = realFinalsResponse.data;
+
       if (simulationMode === 'simple') {
         // Simple mode: sequential calls with nextMatches
         let currentMatches = knockoutBracket;
-        
+
         while (true) {
           const response: { data: finalsResponse } = await fetchService.simulateknockouts(type, currentMatches);
-          
+
           // Map and accumulate matches
           const mapped = mapFinalsResponseToSimulatedBracket(response.data, allMatches, currentStage);
           allMatches = mapped.matches;
-          
+
           if (response.data.isFinal) {
+            // Combine with real data before setting final bracket
+            const combinedMatches = combineRealAndSimulatedData(realMatches, allMatches);
+
+            // Determine champion from combined data
+            const finalMatchId = '5-1';
+            const finalMatch = combinedMatches[finalMatchId];
+            let champion = mapped.champion;
+            let championProbability = mapped.championProbability;
+
+            // If we have real final data with results, use it
+            if (finalMatch?.winner && finalMatch.winner !== 'draw') {
+              champion = finalMatch.winner === 'A' ? finalMatch.teamA : finalMatch.teamB;
+              championProbability = finalMatch.played ? 100 : mapped.championProbability;
+            }
+
             // Set final bracket data
             setBracketData({
-              matches: allMatches,
-              champion: mapped.champion,
-              championProbability: mapped.championProbability,
+              matches: combinedMatches,
+              champion,
+              championProbability,
             });
             break;
           }
-          
+
           // Continue with next round
           currentMatches = response.data.nextMatches;
           currentStage++;
@@ -301,36 +394,51 @@ export const useSimulator = () => {
         // Adaptive mode: sequential calls with adaptiveRequest
         let currentMatches = knockoutBracket;
         let previousResults = ratingData;
-        
+
         while (true) {
           const request: adaptiveRequest = {
             matches: currentMatches,
             previuosResults: previousResults,
           };
-          
+
           const response: { data: finalsResponse } = await fetchService.simulateknockoutsadp(request);
-          
+
           // Map and accumulate matches
           const mapped = mapFinalsResponseToSimulatedBracket(response.data, allMatches, currentStage);
           allMatches = mapped.matches;
-          
+
           if (response.data.isFinal) {
+            // Combine with real data before setting final bracket
+            const combinedMatches = combineRealAndSimulatedData(realMatches, allMatches);
+
+            // Determine champion from combined data
+            const finalMatchId = '5-1';
+            const finalMatch = combinedMatches[finalMatchId];
+            let champion = mapped.champion;
+            let championProbability = mapped.championProbability;
+
+            // If we have real final data with results, use it
+            if (finalMatch?.winner && finalMatch.winner !== 'draw') {
+              champion = finalMatch.winner === 'A' ? finalMatch.teamA : finalMatch.teamB;
+              championProbability = finalMatch.played ? 100 : mapped.championProbability;
+            }
+
             // Set final bracket data
             setBracketData({
-              matches: allMatches,
-              champion: mapped.champion,
-              championProbability: mapped.championProbability,
+              matches: combinedMatches,
+              champion,
+              championProbability,
             });
             break;
           }
-          
+
           // Continue with next round
           currentMatches = response.data.nextMatches;
           previousResults = response.data.previousResults;
           currentStage++;
         }
       }
-      
+
       setPhase('complete');
       setActiveTab('brackets');
     } catch {

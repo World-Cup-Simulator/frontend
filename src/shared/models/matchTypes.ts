@@ -22,8 +22,8 @@ export interface finalsMatch {
     teamBName: string,
     teamACode: string,
     teamBCode: string,
-    goalsA: number,
-    goalsB: number
+    goalsA: number | null,
+    goalsB: number | null
 }
 
 export interface thirdPlace {
